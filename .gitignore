@@ -1,7 +1,0 @@
-/vendor
-/.idea
-/Gopkg.lock
-/fabric-network/chaincode/chaincode_example02/go/vendor
-/*.exe
-/demo
-/accelor-demo
