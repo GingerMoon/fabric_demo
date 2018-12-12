@@ -67,6 +67,11 @@ func (t *Paymentcc) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	// get arguments and transient
 	f, args := stub.GetFunctionAndParameters()
 
+	logger.Infof("function: %s", f)
+	for i, arg := range args {
+		logger.Infof("receives args[%d]: %s", i, arg)
+	}
+
 	switch f {
 	case "create":
 		return t.create(stub, args)
@@ -89,8 +94,6 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
-
-	logger.Infof("put %s : %s", payload.To, payload.Amount)
 
 	if _, err := strconv.Atoi(payload.Amount); err != nil {
 		return shim.Error("Expecting integer value for asset holding")
@@ -117,7 +120,6 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 		return shim.Error(fmt.Sprintf("getStateDecryptAndVerify failed, err %+v", err))
 	}
 
-	// here we return the decrypted and verified value as a result
 	return shim.Success(cleartextValue)
 }
 
@@ -173,32 +175,8 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	}
 
 	payload_str := args[0]
-	sigFrom := args[1]
-	sigTo := args[2]
-
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
-
-	// verify signatures (A & B)
-	pubkeyFrom, err := parseEcdsaPubkey([]byte(payload.From))
-	if err != nil {
-		return shim.Error(fmt.Sprintf("put balance failed(parseEcdsaPubkey) public key is %s, err %+v", payload.From, err))
-	}
-
-	isValid, err := verifyECDSA(pubkeyFrom, sigFrom, payload_str)
-	if err != nil || !isValid {
-		return shim.Error(fmt.Sprintf("put balance failed(verifyECDSA) public key is %s, sigFrom is %s, payload is %s -- err %+v", payload.From, sigFrom, payload_str, err))
-	}
-
-	pubkeyTo, err := parseEcdsaPubkey([]byte(payload.To))
-	if err != nil {
-		return shim.Error(fmt.Sprintf("put balance failed(parseEcdsaPubkey) public key is %s, err %+v", payload.To, err))
-	}
-
-	isValid, err = verifyECDSA(pubkeyTo, sigTo, payload_str)
-	if err != nil || !isValid {
-		return shim.Error(fmt.Sprintf("put balance failed(verifyECDSA) public key is %s, sigFrom is %s, payload is %s -- err %+v", payload.To, sigTo, payload_str, err))
-	}
 
 	// get balance of A and B
 	balanceA, err := t.getBalance(stub, payload.From)
@@ -219,7 +197,7 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 
 	balanceA = balanceA - X
 	if balanceA < 0 {
-		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA, X))
+		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA + X, X))
 	}
 	err = t.putBalance(stub, payload.From, strconv.Itoa(balanceA))
 	if err != nil {

@@ -2,6 +2,10 @@
 // Click here and start typing.
 package main
 
+import "log"
+
 func main() {
-	Demo()
+	if error := Demo(); error != nil {
+		log.Fatalf(error.Error())
+	}
 }

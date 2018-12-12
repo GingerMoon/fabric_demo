@@ -80,7 +80,6 @@ func getEnvironment() (int, string) {
 }
 
 func Demo() error {
-
 	// create sdk
 	configPath := "config-payment.yaml"
 	sdk, err := fabsdk.New(config.FromFile(configPath))
@@ -88,13 +87,11 @@ func Demo() error {
 		return errors.WithMessage(err, "Failed to create new SDK: %s")
 	}
 	defer sdk.Close()
-
 	// create client
 	client, err := New(sdk)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	// crate accounts in the blockchain.
 	for i := 0; i < clientamount; i++ {
 		client.CreateAccount(i, "100")
@@ -207,7 +204,7 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), Amount: amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
-		return "", errors.WithMessage(err, "CreateAccount failed (marshall payload).")
+		return "", errors.WithMessage(err, "Transfer failed (marshall payload).")
 	}
 
 	args := [][]byte{payload}
