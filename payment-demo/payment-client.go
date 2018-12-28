@@ -31,6 +31,33 @@ const (
 
 var logger = flogging.MustGetLogger("payment-demo")
 
+type statistics struct {
+	// duration in ms
+	querElapsedTime time.Duration
+	tx4createElapsedTime time.Duration
+	tx4transferElapsedTime time.Duration
+
+	queries time.Duration
+	txs4create time.Duration
+	txs4transfer time.Duration
+
+	transferTpsChan chan time.Duration
+}
+
+func (s8s *statistics) print() {
+
+	logger.Infof("total query elapsed time: %dms. Queries: %d. QPS: %d",
+		s8s.querElapsedTime, s8s.queries, s8s.queries*1000/s8s.querElapsedTime)
+
+	logger.Infof("total tx(create) elapsed time: %ds. Txs(create): %d. TPS: %d",
+		s8s.tx4createElapsedTime, s8s.txs4create, s8s.txs4create/s8s.tx4createElapsedTime)
+
+	logger.Infof("total tx(transfer) elapsed time: %ds. Txs(transfer): %d. TPS: %d",
+		s8s.tx4transferElapsedTime, s8s.txs4transfer, s8s.txs4transfer/s8s.tx4transferElapsedTime)
+}
+
+var s8s = &statistics {transferTpsChan:make(chan time.Duration)}
+
 type payload struct {
 	From   string `json:from`
 	To     string `json:to`
@@ -94,17 +121,22 @@ func Demo() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	// crate accounts in the blockchain.
 	for i := 0; i < clientamount; i++ {
 		client.CreateAccount(i, "100")
 	}
 
 	// store error msg in channel and at last print them all in a batch
-	ch := make(chan string)
+	txErrorCh := make(chan string)
 	go func () {
 		l := list.New()
-		for msg := <- ch; "end" != msg; msg = <- ch {
-			l.PushBack(msg)
+		for {
+			errmsg := <-txErrorCh
+			if len(errmsg) == 0 {
+				break
+			}
+			l.PushBack(errmsg)
 		}
 
 		logger.Infof("----- the following transactions failed: -----")
@@ -119,6 +151,18 @@ func Demo() error {
 	s1 := mrand.NewSource(time.Now().UnixNano())
 	r1 := mrand.New(s1)
 	var wg sync.WaitGroup
+
+	go func() {
+		for {
+			elapsed := <- s8s.transferTpsChan
+			if elapsed <= 0 {
+				break
+			}
+			s8s.tx4transferElapsedTime += elapsed
+			s8s.txs4transfer++
+		}
+	}()
+
 	for i := 0; i < clientamount*2; i++ {
 		wg.Add(1)
 		go func() {
@@ -126,19 +170,17 @@ func Demo() error {
 
 			from := r1.Intn(clientamount)
 			to := r1.Intn(clientamount)
-			if from == to {
-				return
-			}
-
 			_, err := client.Transfer(from, to, amount)
 			if err != nil {
-				ch <- err.Error()
+				txErrorCh <- err.Error()
 			}
 		}()
 	}
 	wg.Wait()
-	ch <- "end"
+	close(txErrorCh)
+	close(s8s.transferTpsChan)
 	logger.Infof("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
+	s8s.print()
 	return nil
 }
 
@@ -164,7 +206,6 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 		var accountinfo accountInfo
 		accountinfo.FromBytes([]byte(accountinfoStr))
 		balance, _ := strconv.Atoi(string(accountinfo.Balance))
-		logger.Infof("%d : %d", i, balance)
 		totalAmount += balance
 	}
 	return totalAmount
@@ -179,26 +220,34 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 
 	args := [][]byte{payload}
 
+	start := time.Now()
 	_, err = c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "create", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
+	s8s.tx4createElapsedTime += time.Since(start) / time.Second
+	s8s.txs4create++
+
 	if err != nil {
 		logger.Fatalf("Failed to create account: %s", err)
 	}
-
+	logger.Infof("created account: %v - %v", index, amount)
 	return nil
 }
 
 func (c *PaymentClient) GetState(index int) string {
 	args := [][]byte{[]byte(strconv.Itoa(index))}
 
-	response, err := c.client.Execute(
+	start := time.Now()
+	response, err := c.client.Query(
 		channel.Request{ChaincodeID: ccID, Fcn: "query", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
+	s8s.querElapsedTime += time.Since(start) / time.Millisecond
+	s8s.queries++
 
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
 	}
+	logger.Infof("%v : %v", index, string(response.Payload))
 	return string(response.Payload)
 }
 
@@ -211,12 +260,15 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 
 	args := [][]byte{payload}
 
+	start := time.Now()
 	response, err := c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "transfer", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
+	s8s.transferTpsChan <- time.Since(start) / time.Second
+
 	if err != nil {
 		return "",  errors.WithMessage(err, fmt.Sprintf("Transfer(%s) failed. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload))
 	}
-
+	logger.Infof("Transfer(%s) succeeded. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload)
 	return string(response.TransactionID), nil
 }
