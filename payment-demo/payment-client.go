@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/pkg/errors"
-	"log"
 	mrand "math/rand"
 	"os"
 	"strconv"
@@ -28,6 +28,8 @@ const (
 	ordererOrgName = "OrdererOrg"
 	AESKEY         = "AESKEY"
 )
+
+var logger = flogging.MustGetLogger("payment-demo")
 
 type payload struct {
 	From   string `json:from`
@@ -65,16 +67,16 @@ var (
 func getEnvironment() (int, string) {
 	val, ok := os.LookupEnv("CLIENTAMOUNT")
 	if !ok {
-		log.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable CLIENTAMOUNT")
 	}
 	clientamount, err := strconv.Atoi(val)
 	if err != nil {
-		log.Fatalf("Illeagle environment variable CLIENTAMOUNT: %s", val)
+		logger.Fatalf("Illeagle environment variable CLIENTAMOUNT: %s", val)
 	}
 
 	amount, ok := os.LookupEnv("AMOUNT")
 	if !ok {
-		log.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable CLIENTAMOUNT")
 	}
 	return clientamount, amount
 }
@@ -105,13 +107,13 @@ func Demo() error {
 			l.PushBack(msg)
 		}
 
-		log.Print("----- the following transactions failed: -----")
+		logger.Infof("----- the following transactions failed: -----")
 		for e:= l.Front(); e != nil; e = e.Next() {
-			log.Printf("\n %v \n ", e.Value)
+			logger.Infof("\n %v \n ", e.Value)
 		}
 	}()
 
-	log.Printf("Before the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
+	logger.Infof("Before the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
 
 	// simulate the transaction
 	s1 := mrand.NewSource(time.Now().UnixNano())
@@ -136,7 +138,7 @@ func Demo() error {
 	}
 	wg.Wait()
 	ch <- "end"
-	log.Printf("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
+	logger.Infof("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
 	return nil
 }
 
@@ -162,7 +164,7 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 		var accountinfo accountInfo
 		accountinfo.FromBytes([]byte(accountinfoStr))
 		balance, _ := strconv.Atoi(string(accountinfo.Balance))
-		log.Printf("%d : %d", i, balance)
+		logger.Infof("%d : %d", i, balance)
 		totalAmount += balance
 	}
 	return totalAmount
@@ -181,7 +183,7 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 		channel.Request{ChaincodeID: ccID, Fcn: "create", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
-		log.Fatalf("Failed to create account: %s", err)
+		logger.Fatalf("Failed to create account: %s", err)
 	}
 
 	return nil
@@ -195,7 +197,7 @@ func (c *PaymentClient) GetState(index int) string {
 		channel.WithRetry(retry.DefaultChannelOpts))
 
 	if err != nil {
-		log.Fatalf("Failed to query funds: %s", err)
+		logger.Fatalf("Failed to query funds: %s", err)
 	}
 	return string(response.Payload)
 }
