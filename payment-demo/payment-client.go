@@ -44,19 +44,49 @@ type statistics struct {
 	transferTpsChan chan time.Duration
 }
 
+func (s8s * statistics) startTps4transfer() {
+	go func() {
+		for {
+			elapsed := <- s8s.transferTpsChan
+			if elapsed <= 0 {
+				break
+			}
+			s8s.tx4transferElapsedTime += elapsed
+			s8s.txs4transfer++
+		}
+		logger.Infof("The consumer of s8s.transferTpsChan exited.")
+	}()
+}
+
+func (s8s * statistics) endTps4transfer() {
+	close(s8s.transferTpsChan)
+}
+
+func (s8s * statistics) addQueryElapsedTime(start time.Time) {
+	s8s.querElapsedTime += time.Since(start) / time.Millisecond
+	s8s.queries++
+}
+
+func (s8s * statistics) addTxs4createElapsedTime(start time.Time) {
+	s8s.tx4createElapsedTime += time.Since(start) / time.Millisecond
+	s8s.txs4create++
+}
+
+func (s8s * statistics) addTxs4TransferElapsedTime(start time.Time) {
+	s8s.transferTpsChan <- time.Since(start) / time.Millisecond
+}
+
 func (s8s *statistics) print() {
 
 	logger.Infof("total query elapsed time: %dms. Queries: %d. QPS: %d",
 		s8s.querElapsedTime, s8s.queries, s8s.queries*1000/s8s.querElapsedTime)
 
-	logger.Infof("total tx(create) elapsed time: %ds. Txs(create): %d. TPS: %d",
-		s8s.tx4createElapsedTime, s8s.txs4create, s8s.txs4create/s8s.tx4createElapsedTime)
+	logger.Infof("total tx(create) elapsed time: %dms. Txs(create): %d. TPS: %d",
+		s8s.tx4createElapsedTime, s8s.txs4create, s8s.txs4create*1000/s8s.tx4createElapsedTime)
 
-	logger.Infof("total tx(transfer) elapsed time: %ds. Txs(transfer): %d. TPS: %d",
-		s8s.tx4transferElapsedTime, s8s.txs4transfer, s8s.txs4transfer/s8s.tx4transferElapsedTime)
+	logger.Infof("total tx(transfer) elapsed time: %dms. Txs(transfer): %d. TPS: %d",
+		s8s.tx4transferElapsedTime, s8s.txs4transfer, s8s.txs4transfer*1000/s8s.tx4transferElapsedTime)
 }
-
-var s8s = &statistics {transferTpsChan:make(chan time.Duration)}
 
 type payload struct {
 	From   string `json:from`
@@ -127,65 +157,17 @@ func Demo() error {
 		client.CreateAccount(i, "100")
 	}
 
-	// store error msg in channel and at last print them all in a batch
-	txErrorCh := make(chan string)
-	go func () {
-		l := list.New()
-		for {
-			errmsg := <-txErrorCh
-			if len(errmsg) == 0 {
-				break
-			}
-			l.PushBack(errmsg)
-		}
-
-		logger.Infof("----- the following transactions failed: -----")
-		for e:= l.Front(); e != nil; e = e.Next() {
-			logger.Infof("\n %v \n ", e.Value)
-		}
-	}()
-
 	logger.Infof("Before the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
-
-	// simulate the transaction
-	s1 := mrand.NewSource(time.Now().UnixNano())
-	r1 := mrand.New(s1)
-	var wg sync.WaitGroup
-
-	go func() {
-		for {
-			elapsed := <- s8s.transferTpsChan
-			if elapsed <= 0 {
-				break
-			}
-			s8s.tx4transferElapsedTime += elapsed
-			s8s.txs4transfer++
-		}
-	}()
-
-	for i := 0; i < clientamount*2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			from := r1.Intn(clientamount)
-			to := r1.Intn(clientamount)
-			_, err := client.Transfer(from, to, amount)
-			if err != nil {
-				txErrorCh <- err.Error()
-			}
-		}()
-	}
-	wg.Wait()
-	close(txErrorCh)
-	close(s8s.transferTpsChan)
+	client.transfer()
 	logger.Infof("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
-	s8s.print()
+
+	client.statistics()
 	return nil
 }
 
 type PaymentClient struct {
 	client *channel.Client
+	s8s *statistics
 }
 
 func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
@@ -196,7 +178,56 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "Failed to create new channel client: %s")
 	}
-	return &PaymentClient{client}, nil
+	var s8s = &statistics {transferTpsChan:make(chan time.Duration, clientamount)}
+	return &PaymentClient{client, s8s}, nil
+}
+
+func (c *PaymentClient) statistics() {
+	c.s8s.print()
+}
+
+func (c *PaymentClient) transfer() {
+	c.s8s.startTps4transfer()
+	defer c.s8s.endTps4transfer()
+
+	// print failed tx message at last in a batch
+	txErrCh := make(chan string, 100)
+	defer close(txErrCh)
+	go func () {
+		l := list.New()
+		for {
+			errmsg := <-txErrCh
+			if len(errmsg) != 0 {
+				l.PushBack(errmsg)
+			} else {
+				break
+			}
+		}
+
+		logger.Infof("----- the following transactions failed: -----")
+		for e:= l.Front(); e != nil; e = e.Next() {
+			logger.Infof("\n %v \n ", e.Value)
+		}
+	}()
+
+	// simulate the transaction
+	s1 := mrand.NewSource(time.Now().UnixNano())
+	r1 := mrand.New(s1)
+	var wg sync.WaitGroup
+	for i := 0; i < clientamount*2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			from := r1.Intn(clientamount)
+			to := r1.Intn(clientamount)
+			_, err := c.Transfer(from, to, amount)
+			if err != nil {
+				txErrCh <- err.Error()
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func (c *PaymentClient) GetNetworkTotalAmount() int {
@@ -224,8 +255,7 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 	_, err = c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "create", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	s8s.tx4createElapsedTime += time.Since(start) / time.Second
-	s8s.txs4create++
+	c.s8s.addTxs4createElapsedTime(start)
 
 	if err != nil {
 		logger.Fatalf("Failed to create account: %s", err)
@@ -241,8 +271,7 @@ func (c *PaymentClient) GetState(index int) string {
 	response, err := c.client.Query(
 		channel.Request{ChaincodeID: ccID, Fcn: "query", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	s8s.querElapsedTime += time.Since(start) / time.Millisecond
-	s8s.queries++
+	c.s8s.addQueryElapsedTime(start)
 
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
@@ -264,7 +293,7 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 	response, err := c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "transfer", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	s8s.transferTpsChan <- time.Since(start) / time.Second
+	c.s8s.addTxs4TransferElapsedTime(start)
 
 	if err != nil {
 		return "",  errors.WithMessage(err, fmt.Sprintf("Transfer(%s) failed. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload))
