@@ -31,63 +31,6 @@ const (
 
 var logger = flogging.MustGetLogger("payment-demo")
 
-type statistics struct {
-	// duration in ms
-	querElapsedTime time.Duration
-	tx4createElapsedTime time.Duration
-	tx4transferElapsedTime time.Duration
-
-	queries time.Duration
-	txs4create time.Duration
-	txs4transfer time.Duration
-
-	transferTpsChan chan time.Duration
-}
-
-func (s8s * statistics) startTps4transfer() {
-	go func() {
-		for {
-			elapsed := <- s8s.transferTpsChan
-			if elapsed <= 0 {
-				break
-			}
-			s8s.tx4transferElapsedTime += elapsed
-			s8s.txs4transfer++
-		}
-		logger.Infof("The consumer of s8s.transferTpsChan exited.")
-	}()
-}
-
-func (s8s * statistics) endTps4transfer() {
-	close(s8s.transferTpsChan)
-}
-
-func (s8s * statistics) addQueryElapsedTime(start time.Time) {
-	s8s.querElapsedTime += time.Since(start) / time.Millisecond
-	s8s.queries++
-}
-
-func (s8s * statistics) addTxs4createElapsedTime(start time.Time) {
-	s8s.tx4createElapsedTime += time.Since(start) / time.Millisecond
-	s8s.txs4create++
-}
-
-func (s8s * statistics) addTxs4TransferElapsedTime(start time.Time) {
-	s8s.transferTpsChan <- time.Since(start) / time.Millisecond
-}
-
-func (s8s *statistics) print() {
-
-	logger.Infof("total query elapsed time: %dms. Queries: %d. QPS: %d",
-		s8s.querElapsedTime, s8s.queries, s8s.queries*1000/s8s.querElapsedTime)
-
-	logger.Infof("total tx(create) elapsed time: %dms. Txs(create): %d. TPS: %d",
-		s8s.tx4createElapsedTime, s8s.txs4create, s8s.txs4create*1000/s8s.tx4createElapsedTime)
-
-	logger.Infof("total tx(transfer) elapsed time: %dms. Txs(transfer): %d. TPS: %d",
-		s8s.tx4transferElapsedTime, s8s.txs4transfer, s8s.txs4transfer*1000/s8s.tx4transferElapsedTime)
-}
-
 type payload struct {
 	From   string `json:from`
 	To     string `json:to`
@@ -118,56 +61,183 @@ func (a *accountInfo) FromBytes(d []byte) error {
 }
 
 var (
-	clientamount, amount = getEnvironment()
+	clientamount, accounts, amount = getEnvironment()
+	elapsed4CreateAccounts = 0
+	elapsed4Transfer = 0
+	elapsed4Query = 0
 )
 
-func getEnvironment() (int, string) {
-	val, ok := os.LookupEnv("CLIENTAMOUNT")
+func getEnvironment() (int, int, string) {
+	val, ok := os.LookupEnv("CLIENT_AMOUNT")
 	if !ok {
-		logger.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable CLIENT_AMOUNT")
 	}
 	clientamount, err := strconv.Atoi(val)
 	if err != nil {
-		logger.Fatalf("Illeagle environment variable CLIENTAMOUNT: %s", val)
+		logger.Fatalf("Illeagle environment variable CLIENT_AMOUNT: %s", val)
+	}
+
+	val, ok = os.LookupEnv("ACCOUNTS")
+	if !ok {
+		logger.Fatalf("Please set environment variable ACCOUNTS")
+	}
+	accounts, err := strconv.Atoi(val)
+	if err != nil {
+		logger.Fatalf("Illeagle environment variable ACCOUNTS: %s", val)
 	}
 
 	amount, ok := os.LookupEnv("AMOUNT")
 	if !ok {
-		logger.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable AMOUNT")
 	}
-	return clientamount, amount
+	return clientamount, accounts, amount
 }
 
 func Demo() error {
-	// create sdk
+
+	logger.Info("initializing sdk...")
 	configPath := "config-payment.yaml"
 	sdk, err := fabsdk.New(config.FromFile(configPath))
 	if err != nil {
 		return errors.WithMessage(err, "Failed to create new SDK: %s")
 	}
 	defer sdk.Close()
-	// create client
-	client, err := New(sdk)
-	if err != nil {
-		return errors.WithStack(err)
+
+	logger.Infof("Creating %d clients", clientamount)
+	clients := make([]*PaymentClient, clientamount)
+	for i := 0; i < clientamount; i++ {
+		client, err := New(sdk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		clients[i] = client
 	}
+
+	CreateAccounts(clients)
+
+	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	Transfer(clients)
+	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+
+	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	return nil
+}
+
+func CreateAccounts(clients []*PaymentClient) {
+	var fense sync.WaitGroup
+	start := time.Now()
 
 	// crate accounts in the blockchain.
-	for i := 0; i < clientamount; i++ {
-		client.CreateAccount(i, "100")
+	for c, _ := range clients {
+		fense.Add(1)
+		go func(cc int) {
+			defer fense.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				clients[i%clientamount].CreateAccount(i, "100")
+			}
+		}(c)
 	}
+	fense.Wait()
+	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
+}
 
-	logger.Infof("Before the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
-	client.transfer()
-	logger.Infof("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
+func GetNetworkTotalAmount(clients []*PaymentClient) int {
+	var fense sync.WaitGroup
+	start := time.Now()
 
-	client.statistics()
-	return nil
+	totalAmount := 0
+	ch := make(chan int)
+
+	fense.Add(1)
+	go func() {
+		defer fense.Done()
+		for {
+			balance, ok := <- ch
+			if !ok {
+				return
+			} else {
+				totalAmount += balance
+			}
+		}
+	}()
+
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				accountinfoStr := clients[i%clientamount].GetState(i)
+				var accountinfo accountInfo
+				accountinfo.FromBytes([]byte(accountinfoStr))
+				balance, _ := strconv.Atoi(string(accountinfo.Balance))
+				ch <- balance
+			}
+		}(c)
+	}
+	w.Wait()
+	close(ch)
+
+	fense.Wait()
+	elapsed4Query = int(time.Since(start) / time.Millisecond)
+	return totalAmount
+}
+
+func Transfer(clients []*PaymentClient) {
+	var fense sync.WaitGroup
+	start := time.Now()
+
+	// print failed tx message at last in a batch
+	txErrCh := make(chan string, 100)
+	fense.Add(1)
+	go func () {
+		defer fense.Done()
+		l := list.New()
+		for {
+			errmsg, ok := <-txErrCh
+			if ok {
+				l.PushBack(errmsg)
+			} else {
+				break
+			}
+		}
+
+		logger.Infof("----- the following transactions failed: -----")
+		for e:= l.Front(); e != nil; e = e.Next() {
+			logger.Infof("\n %v \n ", e.Value)
+		}
+	}()
+
+	// simulate the transaction
+	s1 := mrand.NewSource(time.Now().UnixNano())
+	r1 := mrand.New(s1)
+
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				from := r1.Intn(clientamount)
+				to := r1.Intn(clientamount)
+				_, err := clients[i%clientamount].Transfer(from, to, amount)
+				if err != nil {
+					txErrCh <- err.Error()
+				}
+			}
+		}(c)
+	}
+	w.Wait()
+	close(txErrCh)
+
+	fense.Wait()
+	elapsed4Transfer = int(time.Since(start) / time.Millisecond)
 }
 
 type PaymentClient struct {
 	client *channel.Client
-	s8s *statistics
 }
 
 func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
@@ -178,17 +248,10 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "Failed to create new channel client: %s")
 	}
-	var s8s = &statistics {transferTpsChan:make(chan time.Duration, clientamount)}
-	return &PaymentClient{client, s8s}, nil
-}
-
-func (c *PaymentClient) statistics() {
-	c.s8s.print()
+	return &PaymentClient{client}, nil
 }
 
 func (c *PaymentClient) transfer() {
-	c.s8s.startTps4transfer()
-	defer c.s8s.endTps4transfer()
 
 	// print failed tx message at last in a batch
 	txErrCh := make(chan string, 100)
@@ -251,11 +314,9 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 
 	args := [][]byte{payload}
 
-	start := time.Now()
 	_, err = c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "create", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	c.s8s.addTxs4createElapsedTime(start)
 
 	if err != nil {
 		logger.Fatalf("Failed to create account: %s", err)
@@ -267,11 +328,9 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 func (c *PaymentClient) GetState(index int) string {
 	args := [][]byte{[]byte(strconv.Itoa(index))}
 
-	start := time.Now()
 	response, err := c.client.Query(
 		channel.Request{ChaincodeID: ccID, Fcn: "query", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	c.s8s.addQueryElapsedTime(start)
 
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
@@ -289,11 +348,9 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 
 	args := [][]byte{payload}
 
-	start := time.Now()
 	response, err := c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "transfer", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	c.s8s.addTxs4TransferElapsedTime(start)
 
 	if err != nil {
 		return "",  errors.WithMessage(err, fmt.Sprintf("Transfer(%s) failed. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload))
