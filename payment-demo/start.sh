@@ -1,5 +1,6 @@
 #dep init
 go build
-export CLIENTAMOUNT=5
+export CLIENT_AMOUNT=1000
+export ACCOUNTS=10000
 export AMOUNT=80
 ./payment-demo

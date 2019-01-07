@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/pkg/errors"
-	"log"
 	mrand "math/rand"
 	"os"
 	"strconv"
@@ -28,6 +28,8 @@ const (
 	ordererOrgName = "OrdererOrg"
 	AESKEY         = "AESKEY"
 )
+
+var logger = flogging.MustGetLogger("payment-demo")
 
 type payload struct {
 	From   string `json:from`
@@ -59,85 +61,179 @@ func (a *accountInfo) FromBytes(d []byte) error {
 }
 
 var (
-	clientamount, amount = getEnvironment()
+	clientamount, accounts, amount = getEnvironment()
+	elapsed4CreateAccounts = 0
+	elapsed4Transfer = 0
+	elapsed4Query = 0
 )
 
-func getEnvironment() (int, string) {
-	val, ok := os.LookupEnv("CLIENTAMOUNT")
+func getEnvironment() (int, int, string) {
+	val, ok := os.LookupEnv("CLIENT_AMOUNT")
 	if !ok {
-		log.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable CLIENT_AMOUNT")
 	}
 	clientamount, err := strconv.Atoi(val)
 	if err != nil {
-		log.Fatalf("Illeagle environment variable CLIENTAMOUNT: %s", val)
+		logger.Fatalf("Illeagle environment variable CLIENT_AMOUNT: %s", val)
+	}
+
+	val, ok = os.LookupEnv("ACCOUNTS")
+	if !ok {
+		logger.Fatalf("Please set environment variable ACCOUNTS")
+	}
+	accounts, err := strconv.Atoi(val)
+	if err != nil {
+		logger.Fatalf("Illeagle environment variable ACCOUNTS: %s", val)
 	}
 
 	amount, ok := os.LookupEnv("AMOUNT")
 	if !ok {
-		log.Fatalf("Please set environment variable CLIENTAMOUNT")
+		logger.Fatalf("Please set environment variable AMOUNT")
 	}
-	return clientamount, amount
+	return clientamount, accounts, amount
 }
 
 func Demo() error {
-	// create sdk
+
+	logger.Info("initializing sdk...")
 	configPath := "config-payment.yaml"
 	sdk, err := fabsdk.New(config.FromFile(configPath))
 	if err != nil {
 		return errors.WithMessage(err, "Failed to create new SDK: %s")
 	}
 	defer sdk.Close()
-	// create client
-	client, err := New(sdk)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	// crate accounts in the blockchain.
+
+	logger.Infof("Creating %d clients", clientamount)
+	clients := make([]*PaymentClient, clientamount)
 	for i := 0; i < clientamount; i++ {
-		client.CreateAccount(i, "100")
+		client, err := New(sdk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		clients[i] = client
 	}
 
-	// store error msg in channel and at last print them all in a batch
-	ch := make(chan string)
-	go func () {
-		l := list.New()
-		for msg := <- ch; "end" != msg; msg = <- ch {
-			l.PushBack(msg)
-		}
+	CreateAccounts(clients)
 
-		log.Print("----- the following transactions failed: -----")
-		for e:= l.Front(); e != nil; e = e.Next() {
-			log.Printf("\n %v \n ", e.Value)
+	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	Transfer(clients)
+	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+
+	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	return nil
+}
+
+func CreateAccounts(clients []*PaymentClient) {
+	var fense sync.WaitGroup
+	start := time.Now()
+
+	// crate accounts in the blockchain.
+	for c, _ := range clients {
+		fense.Add(1)
+		go func(cc int) {
+			defer fense.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				clients[i%clientamount].CreateAccount(i, "100")
+			}
+		}(c)
+	}
+	fense.Wait()
+	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
+}
+
+func GetNetworkTotalAmount(clients []*PaymentClient) int {
+	var fense sync.WaitGroup
+	start := time.Now()
+
+	totalAmount := 0
+	ch := make(chan int)
+
+	fense.Add(1)
+	go func() {
+		defer fense.Done()
+		for {
+			balance, ok := <- ch
+			if !ok {
+				return
+			} else {
+				totalAmount += balance
+			}
 		}
 	}()
 
-	log.Printf("Before the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				accountinfoStr := clients[i%clientamount].GetState(i)
+				var accountinfo accountInfo
+				accountinfo.FromBytes([]byte(accountinfoStr))
+				balance, _ := strconv.Atoi(string(accountinfo.Balance))
+				ch <- balance
+			}
+		}(c)
+	}
+	w.Wait()
+	close(ch)
+
+	fense.Wait()
+	elapsed4Query = int(time.Since(start) / time.Millisecond)
+	return totalAmount
+}
+
+func Transfer(clients []*PaymentClient) {
+	var fense sync.WaitGroup
+	start := time.Now()
+
+	// print failed tx message at last in a batch
+	txErrCh := make(chan string, 100)
+	fense.Add(1)
+	go func () {
+		defer fense.Done()
+		l := list.New()
+		for {
+			errmsg, ok := <-txErrCh
+			if ok {
+				l.PushBack(errmsg)
+			} else {
+				break
+			}
+		}
+
+		logger.Infof("----- the following transactions failed: -----")
+		for e:= l.Front(); e != nil; e = e.Next() {
+			logger.Infof("\n %v \n ", e.Value)
+		}
+	}()
 
 	// simulate the transaction
 	s1 := mrand.NewSource(time.Now().UnixNano())
 	r1 := mrand.New(s1)
-	var wg sync.WaitGroup
-	for i := 0; i < clientamount*2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
 
-			from := r1.Intn(clientamount)
-			to := r1.Intn(clientamount)
-			if from == to {
-				return
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				from := r1.Intn(clientamount)
+				to := r1.Intn(clientamount)
+				_, err := clients[i%clientamount].Transfer(from, to, amount)
+				if err != nil {
+					txErrCh <- err.Error()
+				}
 			}
-
-			_, err := client.Transfer(from, to, amount)
-			if err != nil {
-				ch <- err.Error()
-			}
-		}()
+		}(c)
 	}
-	wg.Wait()
-	ch <- "end"
-	log.Printf("After the transactions, the total amount of the network is %d", client.GetNetworkTotalAmount())
-	return nil
+	w.Wait()
+	close(txErrCh)
+
+	fense.Wait()
+	elapsed4Transfer = int(time.Since(start) / time.Millisecond)
 }
 
 type PaymentClient struct {
@@ -155,6 +251,48 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 	return &PaymentClient{client}, nil
 }
 
+func (c *PaymentClient) transfer() {
+
+	// print failed tx message at last in a batch
+	txErrCh := make(chan string, 100)
+	defer close(txErrCh)
+	go func () {
+		l := list.New()
+		for {
+			errmsg := <-txErrCh
+			if len(errmsg) != 0 {
+				l.PushBack(errmsg)
+			} else {
+				break
+			}
+		}
+
+		logger.Infof("----- the following transactions failed: -----")
+		for e:= l.Front(); e != nil; e = e.Next() {
+			logger.Infof("\n %v \n ", e.Value)
+		}
+	}()
+
+	// simulate the transaction
+	s1 := mrand.NewSource(time.Now().UnixNano())
+	r1 := mrand.New(s1)
+	var wg sync.WaitGroup
+	for i := 0; i < clientamount*2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			from := r1.Intn(clientamount)
+			to := r1.Intn(clientamount)
+			_, err := c.Transfer(from, to, amount)
+			if err != nil {
+				txErrCh <- err.Error()
+			}
+		}()
+	}
+	wg.Wait()
+}
+
 func (c *PaymentClient) GetNetworkTotalAmount() int {
 	totalAmount := 0
 	for i := 0; i < clientamount; i++ {
@@ -162,7 +300,6 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 		var accountinfo accountInfo
 		accountinfo.FromBytes([]byte(accountinfoStr))
 		balance, _ := strconv.Atoi(string(accountinfo.Balance))
-		log.Printf("%d : %d", i, balance)
 		totalAmount += balance
 	}
 	return totalAmount
@@ -180,23 +317,25 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 	_, err = c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "create", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
-	if err != nil {
-		log.Fatalf("Failed to create account: %s", err)
-	}
 
+	if err != nil {
+		logger.Fatalf("Failed to create account: %s", err)
+	}
+	logger.Infof("created account: %v - %v", index, amount)
 	return nil
 }
 
 func (c *PaymentClient) GetState(index int) string {
 	args := [][]byte{[]byte(strconv.Itoa(index))}
 
-	response, err := c.client.Execute(
+	response, err := c.client.Query(
 		channel.Request{ChaincodeID: ccID, Fcn: "query", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
 
 	if err != nil {
-		log.Fatalf("Failed to query funds: %s", err)
+		logger.Fatalf("Failed to query funds: %s", err)
 	}
+	logger.Infof("%v : %v", index, string(response.Payload))
 	return string(response.Payload)
 }
 
@@ -212,9 +351,10 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 	response, err := c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "transfer", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
+
 	if err != nil {
 		return "",  errors.WithMessage(err, fmt.Sprintf("Transfer(%s) failed. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload))
 	}
-
+	logger.Infof("Transfer(%s) succeeded. from %d to %d. \n payload is %s.", response.TransactionID, from, to, payload)
 	return string(response.TransactionID), nil
 }
