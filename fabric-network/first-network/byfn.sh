@@ -152,7 +152,7 @@ function networkUp() {
   checkPrereqs
   # generate artifacts if they don't exist
   if [ ! -d "crypto-config" ]; then
-    generateCerts
+    # generateCerts
     replacePrivateKey
     generateChannelArtifacts
   fi
@@ -251,7 +251,7 @@ function networkDown() {
     #Cleanup images
     removeUnwantedImages
     # remove orderer block and other channel configuration transactions and certs
-    rm -rf channel-artifacts/*.block channel-artifacts/*.tx crypto-config ./org3-artifacts/crypto-config/ channel-artifacts/org3.json
+    # rm -rf channel-artifacts/*.block channel-artifacts/*.tx crypto-config ./org3-artifacts/crypto-config/ channel-artifacts/org3.json
     # remove the docker-compose yaml file that was customized to the example
     rm -f docker-compose-e2e.yaml
   fi
