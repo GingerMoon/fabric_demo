@@ -41,7 +41,7 @@ x-peer-base:
   volumes:
     - /home/docker/demo/fabric-network/bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
   working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-  command: ./peer node start
+  command: peer node start
 
 services:
 
