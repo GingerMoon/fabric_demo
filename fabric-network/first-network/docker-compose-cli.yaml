@@ -90,6 +90,7 @@ services:
         - peer0.org1.example.com:/var/hyperledger/production
     ports:
       - 7051:7051
+      - 7052:7052
       - 7053:7053
     networks:
       - net_byfn
@@ -130,6 +131,7 @@ services:
         - peer0.org2.example.com:/var/hyperledger/production
     ports:
       - 9051:7051
+      - 9051:7052
       - 9053:7053
     networks:
       - net_byfn
