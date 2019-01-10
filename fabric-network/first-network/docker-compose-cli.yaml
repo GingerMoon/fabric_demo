@@ -46,7 +46,6 @@ x-peer-base:
 services:
 
   orderer.example.com:
-    container_name: orderer.example.com
     image: hyperledger/fabric-orderer:$IMAGE_TAG
     environment:
       - FABRIC_LOGGING_SPEC=INFO
@@ -73,7 +72,6 @@ services:
       - net_byfn
 
   peer0.org1.example.com:
-    container_name: peer0.org1.example.com
     << : *default-peer
     environment:
       - CORE_PEER_ID=peer0.org1.example.com
@@ -93,7 +91,6 @@ services:
       - net_byfn
 
   peer1.org1.example.com:
-    container_name: peer1.org1.example.com
     << : *default-peer
     environment:
       - CORE_PEER_ID=peer1.org1.example.com
@@ -113,7 +110,6 @@ services:
       - net_byfn
 
   peer0.org2.example.com:
-    container_name: peer0.org2.example.com
     << : *default-peer
     environment:
       - CORE_PEER_ID=peer0.org2.example.com
@@ -133,7 +129,6 @@ services:
       - net_byfn
 
   peer1.org2.example.com:
-    container_name: peer1.org2.example.com
     << : *default-peer
     environment:
       - CORE_PEER_ID=peer1.org2.example.com
@@ -153,7 +148,6 @@ services:
       - net_byfn
 
   cli:
-    container_name: cli
     image: hyperledger/fabric-tools:$IMAGE_TAG
     tty: true
     stdin_open: true
