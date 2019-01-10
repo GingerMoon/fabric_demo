@@ -131,7 +131,7 @@ services:
         - peer0.org2.example.com:/var/hyperledger/production
     ports:
       - 9051:7051
-      - 9051:7052
+      - 9052:7052
       - 9053:7053
     networks:
       - net_byfn
