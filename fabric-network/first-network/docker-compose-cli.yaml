@@ -14,6 +14,7 @@ volumes:
 
 networks:
   byfn:
+    external: true
 
 services:
 
