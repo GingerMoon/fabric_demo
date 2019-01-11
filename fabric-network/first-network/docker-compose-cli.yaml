@@ -14,7 +14,7 @@ volumes:
 
 networks:
   net_byfn:
-    external: true
+    driver: overlay
 
 x-peer-base:
   &default-peer
