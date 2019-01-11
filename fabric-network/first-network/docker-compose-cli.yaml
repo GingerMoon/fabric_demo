@@ -66,18 +66,19 @@ services:
     ports:
       - 7050:7050
     networks:
-      - net_byfn
+      net_byfn:
+        aliases:
+          orderer.example.com
 
   org1:
-    domainname: peer0.org1.example.com
     << : *default-peer
     environment:
       - "constraint:node==worker1"
       - CORE_PEER_ID=peer0.org1.example.com
-      - CORE_PEER_ADDRESS=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:7051
-      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_CHAINCODELISTENADDRESS=peer0.org1.example.com:7052
       - CORE_PEER_LOCALMSPID=Org1MSP
     volumes:
         - /var/run/:/host/var/run/
@@ -88,7 +89,9 @@ services:
       - 7051:7051
       - 7053:7053
     networks:
-      - net_byfn
+      net_byfn:
+        aliases:
+          peer0.org1.example.com
 
   org2:
     domainname: peer0.org2.example.com
@@ -96,10 +99,10 @@ services:
     environment:
       - "constraint:node==worker2"
       - CORE_PEER_ID=peer0.org2.example.com
-      - CORE_PEER_ADDRESS=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=0.0.0.0:7051
-      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_ADDRESS=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.example.com:7051
+      - CORE_PEER_CHAINCODELISTENADDRESS=peer0.org2.example.com:7052
       - CORE_PEER_LOCALMSPID=Org2MSP
     volumes:
         - /var/run/:/host/var/run/
@@ -110,7 +113,9 @@ services:
       - 9051:7051
       - 9053:7053
     networks:
-      - net_byfn
+      net_byfn:
+        aliases:
+          peer0.org2.example.com
 
   cli:
     image: hyperledger/fabric-tools:latest
