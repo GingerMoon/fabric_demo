@@ -69,6 +69,7 @@ services:
       - net_byfn
 
   org1:
+    domainname: peer0.org1.example.com
     << : *default-peer
     environment:
       - "constraint:node==worker1"
@@ -90,6 +91,7 @@ services:
       - net_byfn
 
   org2:
+    domainname: peer0.org2.example.com
     << : *default-peer
     environment:
       - "constraint:node==worker2"
