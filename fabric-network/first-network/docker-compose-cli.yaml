@@ -68,7 +68,7 @@ services:
     networks:
       net_byfn:
         aliases:
-          orderer.example.com
+          - orderer.example.com
 
   org1:
     << : *default-peer
@@ -91,7 +91,7 @@ services:
     networks:
       net_byfn:
         aliases:
-          peer0.org1.example.com
+          - peer0.org1.example.com
 
   org2:
     domainname: peer0.org2.example.com
@@ -115,7 +115,7 @@ services:
     networks:
       net_byfn:
         aliases:
-          peer0.org2.example.com
+          - peer0.org2.example.com
 
   cli:
     image: hyperledger/fabric-tools:latest
