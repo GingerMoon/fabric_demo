@@ -82,6 +82,7 @@ services:
       - CORE_PEER_ADDRESS=org1:7051
       - CORE_PEER_GOSSIP_BOOTSTRAP=org1:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=org1:7051
+      - CORE_PEER_chaincodeListenAddress=org1:7052
       - CORE_PEER_LOCALMSPID=Org1MSP
     volumes:
         - /var/run/:/host/var/run/
@@ -122,6 +123,7 @@ services:
       - CORE_PEER_ADDRESS=org2:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=org2:7051
       - CORE_PEER_GOSSIP_BOOTSTRAP=org2:7051
+      - CORE_PEER_chaincodeListenAddress=org2:7052
       - CORE_PEER_LOCALMSPID=Org2MSP
     volumes:
         - /var/run/:/host/var/run/
@@ -130,7 +132,6 @@ services:
         - peer0.org2.example.com:/var/hyperledger/production
     ports:
       - 9051:7051
-      - 9052:7052
       - 9053:7053
     networks:
       - net_byfn
