@@ -57,7 +57,13 @@ services:
           - orderer.example.com
 
   org1:
-    << : *default-peer
+    # << : *default-peer
+    tty: true
+    stdin_open: true
+    image: hyperledger/fabric-peer:latest
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash # peer node start
+
     environment:
       # common environment
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
@@ -100,7 +106,13 @@ services:
           - peer0.org1.example.com
 
   org2:
-    << : *default-peer
+    # << : *default-peer
+    tty: true
+    stdin_open: true
+    image: hyperledger/fabric-peer:latest
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash # peer node start
+    
     environment:
       # common environment
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
