@@ -8,9 +8,7 @@ version: '3.4'
 volumes:
   orderer.example.com:
   peer0.org1.example.com:
-  peer1.org1.example.com:
   peer0.org2.example.com:
-  peer1.org2.example.com:
 
 networks:
   net_byfn:
@@ -38,7 +36,8 @@ x-peer-base:
     # - FPGA_SERVER_ADDR=172.17.0.1:50021
     - FPGA_SERVER_ADDR=127.0.0.1:10000
   volumes:
-    - /home/docker/demo/fabric-network/bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
+    - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
+    - /var/run/:/var/run/
   working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
   command: /bin/bash # peer node start
 
@@ -64,9 +63,9 @@ services:
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: /bin/bash
     volumes:
-    - /home/docker/demo/fabric-network/first-network/channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
-    - /home/docker/demo/fabric-network/first-network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
-    - /home/docker/demo/fabric-network/first-network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
+    - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
     - orderer.example.com:/var/hyperledger/production/orderer
     ports:
       - 7050:7050
@@ -86,9 +85,9 @@ services:
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
       - CORE_PEER_LOCALMSPID=Org1MSP
     volumes:
-        - /var/run/:/host/var/run/
-        - /home/docker/demo/fabric-network/first-network/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
-        - /home/docker/demo/fabric-network/first-network/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
+        # - /var/run/:/host/var/run/
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
         - peer0.org1.example.com:/var/hyperledger/production
     ports:
       - 7051:7051
@@ -109,9 +108,9 @@ services:
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
       - CORE_PEER_LOCALMSPID=Org2MSP
     volumes:
-        - /var/run/:/host/var/run/
-        - /home/docker/demo/fabric-network/first-network/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/etc/hyperledger/fabric/msp
-        - /home/docker/demo/fabric-network/first-network/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/etc/hyperledger/fabric/tls
+        # - /var/run/:/host/var/run/
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/etc/hyperledger/fabric/tls
         - peer0.org2.example.com:/var/hyperledger/production
     ports:
       - 9051:7051
@@ -144,10 +143,10 @@ services:
     volumes:
         - /dev/:/dev/
         - /var/run/:/host/var/run/
-        - /home/docker/demo/fabric-network//chaincode/:/opt/gopath/src/github.com/chaincode
-        - /home/docker/demo/fabric-network/first-network/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
-        - /home/docker/demo/fabric-network/first-network/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
-        - /home/docker/demo/fabric-network/first-network/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+        - ..//chaincode/:/opt/gopath/src/github.com/chaincode
+        - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+        - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
         - /home/docker/demo/payment-demo:/opt/gopath/src/github.com/hyperledger/fabric/peer/payment-demo
     depends_on:
       - orderer
