@@ -93,10 +93,10 @@ services:
       - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
         - /var/run/:/host/var/run/
-        - ../crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
-        - ../crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
         - peer0.org1.example.com:/var/hyperledger/production
-        - ../../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
+        - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
       - 7051:7051
       - 7053:7053
@@ -142,10 +142,10 @@ services:
       - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
         - /var/run/:/host/var/run/
-        - ../crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/etc/hyperledger/fabric/msp
-        - ../crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/etc/hyperledger/fabric/tls
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/etc/hyperledger/fabric/tls
         - peer0.org2.example.com:/var/hyperledger/production
-        - ../../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
+        - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
       - 9051:7051
       - 9053:7053
