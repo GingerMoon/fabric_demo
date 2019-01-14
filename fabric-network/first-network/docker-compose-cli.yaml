@@ -14,6 +14,7 @@ networks:
   net_byfn:
     # external: true
     driver: overlay
+    attachable: true
 
 x-peer-base:
   &default-peer # environment and volume doesn't take effect here. 
