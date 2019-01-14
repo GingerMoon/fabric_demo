@@ -44,7 +44,7 @@ services:
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
-    command: /bin/bash # orderer
+    command: /bin/bash # orderer # 
     volumes:
     - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
     - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
@@ -63,7 +63,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: /bin/bash # ./peer node start # 
+    command: peer node start # /bin/bash # 
 
     environment:
       # common environment
@@ -84,9 +84,9 @@ services:
       # specific environment
       - "constraint:node==worker1"
       - CORE_PEER_ID=peer0.org1.example.com
-      - CORE_PEER_ADDRESS=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:7051
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
       - CORE_PEER_LOCALMSPID=Org1MSP
       - FPGA_MOCK=0
@@ -112,7 +112,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: /bin/bash # ./peer node start # 
+    command: /bin/bash # peer node start # 
     
     environment:
       # common environment
@@ -133,9 +133,9 @@ services:
       # specific environment
       - "constraint:node==worker2"
       - CORE_PEER_ID=peer0.org2.example.com
-      - CORE_PEER_ADDRESS=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=0.0.0.0:7051
+      - CORE_PEER_ADDRESS=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.example.com:7051
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
       - CORE_PEER_LOCALMSPID=Org2MSP
       - FPGA_MOCK=0
