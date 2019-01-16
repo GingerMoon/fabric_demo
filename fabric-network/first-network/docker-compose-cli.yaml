@@ -33,7 +33,6 @@ services:
     tty: true
     stdin_open: true
     environment:
-      - "constraint:node==manager1"
       - FABRIC_LOGGING_SPEC=INFO
       - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
       - ORDERER_GENERAL_GENESISMETHOD=file
@@ -58,6 +57,10 @@ services:
       net_byfn:
         aliases:
           - orderer.example.com
+    deploy:
+      placement:
+        constraints: [node.role == bingsu-sw11]
+
 
   peer0org1:
     # << : *default-peer
@@ -84,7 +87,6 @@ services:
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
 
       # specific environment
-      - "constraint:node==worker1"
       - CORE_PEER_ID=peer0.org1.example.com
       - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org1.example.com:7051
@@ -107,6 +109,9 @@ services:
       net_byfn:
         aliases:
           - peer0.org1.example.com
+    deploy:
+      placement:
+        constraints: [node.role == bingsu-sw12]
 
   peer0org2:
     # << : *default-peer
@@ -133,7 +138,6 @@ services:
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
 
       # specific environment
-      - "constraint:node==worker2"
       - CORE_PEER_ID=peer0.org2.example.com
       - CORE_PEER_ADDRESS=peer0.org2.example.com:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:7051
@@ -156,13 +160,15 @@ services:
       net_byfn:
         aliases:
           - peer0.org2.example.com
+    deploy:
+      placement:
+        constraints: [node.role == bingsu-sw13]
 
   cli:
     image: hyperledger/fabric-tools:latest
     tty: true
     stdin_open: true
     environment:
-      - "constraint:node==manager1"
       - GOPATH=/opt/gopath
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       #- FABRIC_LOGGING_SPEC=DEBUG
@@ -195,3 +201,6 @@ services:
       net_byfn:
         aliases:
           - cli.example.com
+    deploy:
+      placement:
+        constraints: [node.role == bingsu-sw15]
