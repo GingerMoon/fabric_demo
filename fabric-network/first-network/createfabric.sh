@@ -1,4 +1,5 @@
 cd $GOPATH/src/bitbucket.org/accelorteam/demo/fabric-network/first-network/
+
 docker container kill $(docker ps --filter "name=dev-*" -q)
 docker image rm -f $(docker images --filter "since=hyperledger/fabric-tools" -q)
 docker stack rm fabric
@@ -6,8 +7,8 @@ sleep 5
 yes y | docker container prune
 yes y | docker image prune
 yes y | docker volume prune
-docker network disconnect -f fabric_net_byfn $(docker ps -a -q)
 yes y | docker network prune
+docker network disconnect -f fabric_net_byfn $(docker ps -a -q)
 echo ***********ls*******************
 docker container ls -a
 docker volume ls
@@ -20,6 +21,15 @@ sleep 15
 docker container ls -a
 docker exec -it 
 
+echo ***********deployment*******************
+docker stack services fabric
+docker service ps fabric_peer0org1
+docker service ps fabric_peer0org2
+docker service ps fabric_orderer
+docker service ps fabric_cli
+docker container ls
+
+echo ***********deployment*******************
 
 export CHANNEL_NAME=mychannel
 export CHAINCODE_NAME=mycc
