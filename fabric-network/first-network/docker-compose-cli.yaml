@@ -59,7 +59,7 @@ services:
           - orderer.example.com
     deploy:
       placement:
-        constraints: [node.role == bingsu-sw14]
+        constraints: [node.hostname == bingsu-sw14]
 
 
   peer0org1:
@@ -111,7 +111,7 @@ services:
           - peer0.org1.example.com
     deploy:
       placement:
-        constraints: [node.role == bingsu-hw]
+        constraints: [node.hostname == bingsu-hw]
 
   peer0org2:
     # << : *default-peer
@@ -162,7 +162,7 @@ services:
           - peer0.org2.example.com
     deploy:
       placement:
-        constraints: [node.role == bingsu-sw]
+        constraints: [node.hostname == bingsu-sw]
 
   cli:
     image: hyperledger/fabric-tools:latest
@@ -203,4 +203,4 @@ services:
           - cli.example.com
     deploy:
       placement:
-        constraints: [node.role == bingsu-sw15] # the same as coordinator of the swarm cluster
+        constraints: [node.hostname == bingsu-sw15] # the same as coordinator of the swarm cluster
