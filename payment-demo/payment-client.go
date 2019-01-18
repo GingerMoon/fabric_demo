@@ -132,7 +132,9 @@ func CreateAccounts(clients []*PaymentClient) {
 
 	// crate accounts in the blockchain.
 	for i := 0; i < accounts; i ++ {
+		fense.Add(1)
 		go func(ii int) {
+			defer fense.Done()
 			clients[ii].CreateAccount(ii, "100")
 		}(i)
 	}
