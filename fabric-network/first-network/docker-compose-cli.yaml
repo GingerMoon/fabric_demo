@@ -62,7 +62,7 @@ services:
           cpus: '0.70'
           memory: 25G
         reservations:
-          cpus: '0.50'
+          cpus: '0.10'
           memory: 20G
       placement:
         constraints: [node.hostname == bingsu-sw15]
@@ -226,10 +226,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.30'
+          cpus: '0.90'
           memory: 5G
         reservations:
-          cpus: '0.25'
+          cpus: '0.10'
           memory: 2G
       placement:
         constraints: [node.hostname == bingsu-sw15] # the same as coordinator of the swarm cluster
