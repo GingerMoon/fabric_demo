@@ -121,7 +121,7 @@ func Demo() error {
 	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
 
 	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000*1000/elapsed4CreateAccounts)
 	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
 }
@@ -146,7 +146,7 @@ func CreateAccounts(clients []*PaymentClient) {
 	//	}(c)
 	//}
 	fense.Wait()
-	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
+	elapsed4CreateAccounts = int(time.Since(start) / time.Microsecond)
 }
 
 func GetNetworkTotalAmount(clients []*PaymentClient) int {
