@@ -116,13 +116,13 @@ func Demo() error {
 
 	CreateAccounts(clients)
 
-	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	Transfer(clients)
-	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//Transfer(clients)
+	//logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
 
 	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
-	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	//logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
 }
 
@@ -130,33 +130,15 @@ func CreateAccounts(clients []*PaymentClient) {
 	var fense sync.WaitGroup
 	start := time.Now()
 
-	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
-	type CreateAccountTask struct {
-		client *PaymentClient
-		index int
-	}
-	taskPool := make(chan CreateAccountTask, len(clients))
-	for i := 0; i < runtime.NumGoroutine(); i++ {
-		fense.Add(1)
-		go func() {
-			defer fense.Done()
-			for true {
-				task, ok := <-taskPool
-				if !ok {
-					return
-				}
-				task.client.CreateAccount(task.index, "100")
-			}
-		}()
-	}
-
-	// crate accounts in the blockchain.
 	for c, _ := range clients {
 		for i := c; i < accounts; i += len(clients) {
-			taskPool <- CreateAccountTask{clients[i%clientamount], i}
+			fense.Add(1)
+			go func() {
+				fense.Done()
+				clients[i%clientamount].CreateAccount(i, "100")
+			}()
 		}
 	}
-	close(taskPool)
 
 	fense.Wait()
 	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
