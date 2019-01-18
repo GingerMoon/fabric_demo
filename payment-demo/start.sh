@@ -1,5 +1,5 @@
 #dep init
-# go build
+go build
 export CLIENT_AMOUNT=100
 export ACCOUNTS=100
 export AMOUNT=60
