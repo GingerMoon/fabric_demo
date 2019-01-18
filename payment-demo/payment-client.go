@@ -3,7 +3,6 @@
 package main
 
 import (
-	"context"
 	"container/list"
 	"encoding/json"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -33,11 +31,6 @@ const (
 )
 
 var logger = flogging.MustGetLogger("payment-demo")
-var workers *semaphore.Weighted
-
-func init() {
-	workers = semaphore.NewWeighted(int64(runtime.NumCPU()))
-}
 
 type payload struct {
 	From   string `json:from`
@@ -137,18 +130,34 @@ func CreateAccounts(clients []*PaymentClient) {
 	var fense sync.WaitGroup
 	start := time.Now()
 
+	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
+	type CreateAccountTask struct {
+		client *PaymentClient
+		index int
+	}
+	taskPool := make(chan CreateAccountTask, len(clients))
+	for i := 0; i < runtime.NumGoroutine(); i++ {
+		fense.Add(1)
+		go func() {
+			defer fense.Done()
+			for true {
+				task, ok := <-taskPool
+				if !ok {
+					return
+				}
+				task.client.CreateAccount(task.index, "100")
+			}
+		}()
+	}
+
 	// crate accounts in the blockchain.
 	for c, _ := range clients {
-		fense.Add(1)
-		workers.Acquire(context.Background(), 1)
-		go func(cc int) {
-			defer workers.Release(1)
-			defer fense.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				clients[i%clientamount].CreateAccount(i, "100")
-			}
-		}(c)
+		for i := c; i < accounts; i += len(clients) {
+			taskPool <- CreateAccountTask{clients[i%clientamount], i}
+		}
 	}
+	close(taskPool)
+
 	fense.Wait()
 	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
 }
@@ -158,13 +167,13 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 	start := time.Now()
 
 	totalAmount := 0
-	ch := make(chan int)
+	chTotalAmount := make(chan int)
 
 	fense.Add(1)
 	go func() {
 		defer fense.Done()
 		for {
-			balance, ok := <- ch
+			balance, ok := <-chTotalAmount
 			if !ok {
 				return
 			} else {
@@ -173,24 +182,34 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 		}
 	}()
 
-	var w sync.WaitGroup
-	for c, _ := range clients {
-		w.Add(1)
-		workers.Acquire(context.Background(), 1)
-		go func(cc int) {
-			defer workers.Release(1)
-			defer w.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				accountinfoStr := clients[i%clientamount].GetState(i)
+	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
+	type QueryAmountTask struct {
+		client *PaymentClient
+		index int
+	}
+	taskPool := make(chan QueryAmountTask, len(clients))
+	for i := 0; i < runtime.NumGoroutine(); i++ {
+		fense.Add(1)
+		go func() {
+			defer fense.Done()
+			for true {
+				task, ok := <-taskPool
+				if !ok {
+					return
+				}
+				accountinfoStr := task.client.GetState(task.index)
 				var accountinfo accountInfo
 				accountinfo.FromBytes([]byte(accountinfoStr))
 				balance, _ := strconv.Atoi(string(accountinfo.Balance))
-				ch <- balance
+				chTotalAmount <- balance
 			}
-		}(c)
+		}()
 	}
-	w.Wait()
-	close(ch)
+
+	for i := 0; i < accounts; i += len(clients) {
+		taskPool <- QueryAmountTask{clients[i%clientamount], i}
+	}
+	close(chTotalAmount)
 
 	fense.Wait()
 	elapsed4Query = int(time.Since(start) / time.Millisecond)
@@ -226,24 +245,36 @@ func Transfer(clients []*PaymentClient) {
 	s1 := mrand.NewSource(time.Now().UnixNano())
 	r1 := mrand.New(s1)
 
-	var w sync.WaitGroup
-	for c, _ := range clients {
-		w.Add(1)
-		workers.Acquire(context.Background(), 1)
-		go func(cc int) {
-			defer workers.Release(1)
-			defer w.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				from := r1.Intn(clientamount)
-				to := r1.Intn(clientamount)
-				_, err := clients[i%clientamount].Transfer(from, to, amount)
+	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
+	type TransferTask struct {
+		client *PaymentClient
+		from int
+		to int
+	}
+	taskPool := make(chan TransferTask, len(clients))
+	for i := 0; i < runtime.NumGoroutine(); i++ {
+		fense.Add(1)
+		go func() {
+			defer fense.Done()
+			for true {
+				task, ok := <-taskPool
+				if !ok {
+					return
+				}
+				_, err := task.client.Transfer(task.from, task.to, amount)
 				if err != nil {
 					txErrCh <- err.Error()
 				}
+
 			}
-		}(c)
+		}()
 	}
-	w.Wait()
+
+	for i := 0; i < accounts; i += len(clients) {
+		from := r1.Intn(clientamount)
+		to := r1.Intn(clientamount)
+		taskPool <- TransferTask{clients[i%clientamount], from, to}
+	}
 	close(txErrCh)
 
 	fense.Wait()
