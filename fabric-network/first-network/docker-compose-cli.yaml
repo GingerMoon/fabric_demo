@@ -226,7 +226,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.90'
+          cpus: '0.50'
           memory: 5G
         reservations:
           cpus: '0.10'
