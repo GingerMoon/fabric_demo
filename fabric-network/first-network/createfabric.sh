@@ -8,7 +8,13 @@ yes y | docker container prune
 yes y | docker image prune
 yes y | docker volume prune
 yes y | docker network prune
+clear
+
 docker network disconnect -f fabric_net_byfn $(docker ps -a -q)
+
+docker service ps --no-trunc 
+docker inspect -f '{{ .Status.Message }}' service_id
+
 echo ***********ls*******************
 docker container ls -a
 docker volume ls

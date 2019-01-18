@@ -1,2 +1,11 @@
 /.idea
 /payment-demo/payment-demo
+/fabric-network/bin-win/configtxgen
+/fabric-network/bin-win/configtxlator
+/fabric-network/bin-win/cryptogen
+/fabric-network/bin-win/discover
+/fabric-network/bin-win/fabric-ca-client
+/fabric-network/bin-win/get-docker-images.sh
+/fabric-network/bin-win/idemixgen
+/fabric-network/bin-win/orderer
+/fabric-network/bin-win/peer
