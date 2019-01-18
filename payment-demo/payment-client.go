@@ -133,10 +133,10 @@ func CreateAccounts(clients []*PaymentClient) {
 	for c, _ := range clients {
 		for i := c; i < accounts; i += len(clients) {
 			fense.Add(1)
-			go func() {
+			go func(ii int) {
 				fense.Done()
-				clients[i%clientamount].CreateAccount(i, "100")
-			}()
+				clients[i%clientamount].CreateAccount(ii, "100")
+			}(i)
 		}
 	}
 
