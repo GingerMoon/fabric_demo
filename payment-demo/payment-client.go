@@ -133,7 +133,7 @@ func CreateAccounts(clients []*PaymentClient) {
 	// crate accounts in the blockchain.
 	for i := 0; i < accounts; i ++ {
 		go func(ii int) {
-			clients[i].CreateAccount(ii, "100")
+			clients[ii].CreateAccount(ii, "100")
 		}(i)
 	}
 	//for c, _ := range clients {
