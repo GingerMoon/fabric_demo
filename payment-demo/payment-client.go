@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"container/list"
 	"encoding/json"
 	"fmt"
@@ -14,9 +15,11 @@ import (
 	"github.com/pkg/errors"
 	mrand "math/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -30,6 +33,11 @@ const (
 )
 
 var logger = flogging.MustGetLogger("payment-demo")
+var workers *semaphore.Weighted
+
+func init() {
+	workers = semaphore.NewWeighted(int64(runtime.NumCPU()))
+}
 
 type payload struct {
 	From   string `json:from`
@@ -132,7 +140,9 @@ func CreateAccounts(clients []*PaymentClient) {
 	// crate accounts in the blockchain.
 	for c, _ := range clients {
 		fense.Add(1)
+		workers.Acquire(context.Background(), 1)
 		go func(cc int) {
+			defer workers.Release(1)
 			defer fense.Done()
 			for i := cc; i < accounts; i += len(clients) {
 				clients[i%clientamount].CreateAccount(i, "100")
@@ -166,7 +176,9 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 	var w sync.WaitGroup
 	for c, _ := range clients {
 		w.Add(1)
+		workers.Acquire(context.Background(), 1)
 		go func(cc int) {
+			defer workers.Release(1)
 			defer w.Done()
 			for i := cc; i < accounts; i += len(clients) {
 				accountinfoStr := clients[i%clientamount].GetState(i)
@@ -217,7 +229,9 @@ func Transfer(clients []*PaymentClient) {
 	var w sync.WaitGroup
 	for c, _ := range clients {
 		w.Add(1)
+		workers.Acquire(context.Background(), 1)
 		go func(cc int) {
+			defer workers.Release(1)
 			defer w.Done()
 			for i := cc; i < accounts; i += len(clients) {
 				from := r1.Intn(clientamount)
