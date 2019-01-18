@@ -57,6 +57,13 @@ services:
         aliases:
           - orderer.example.com
     deploy:
+      resources:
+        limits:
+          cpus: '0.70'
+          memory: 25G
+        reservations:
+          cpus: '0.50'
+          memory: 20G
       placement:
         constraints: [node.hostname == bingsu-sw15]
 
@@ -110,6 +117,13 @@ services:
         aliases:
           - peer0.org1.example.com
     deploy:
+      resources:
+        limits:
+          cpus: '0.90'
+          memory: 60G
+        reservations:
+          cpus: '0.80'
+          memory: 50G
       placement:
         constraints: [node.hostname == bingsu-hw]
 
@@ -162,6 +176,13 @@ services:
         aliases:
           - peer0.org2.example.com
     deploy:
+      resources:
+        limits:
+          cpus: '0.90'
+          memory: 60G
+        reservations:
+          cpus: '0.80'
+          memory: 50G
       placement:
         constraints: [node.hostname == bingsu-sw]
 
@@ -203,5 +224,12 @@ services:
         aliases:
           - cli.example.com
     deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 5G
+        reservations:
+          cpus: '0.25'
+          memory: 2G
       placement:
         constraints: [node.hostname == bingsu-sw15] # the same as coordinator of the swarm cluster
