@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	mrand "math/rand"
 	"os"
-	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -130,16 +129,16 @@ func CreateAccounts(clients []*PaymentClient) {
 	var fense sync.WaitGroup
 	start := time.Now()
 
+	// crate accounts in the blockchain.
 	for c, _ := range clients {
-		for i := c; i < accounts; i += len(clients) {
-			fense.Add(1)
-			go func(ii int) {
-				fense.Done()
-				clients[i%clientamount].CreateAccount(ii, "100")
-			}(i)
-		}
+		fense.Add(1)
+		go func(cc int) {
+			defer fense.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				clients[i%clientamount].CreateAccount(i, "100")
+			}
+		}(c)
 	}
-
 	fense.Wait()
 	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
 }
@@ -149,13 +148,13 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 	start := time.Now()
 
 	totalAmount := 0
-	chTotalAmount := make(chan int)
+	ch := make(chan int)
 
 	fense.Add(1)
 	go func() {
 		defer fense.Done()
 		for {
-			balance, ok := <-chTotalAmount
+			balance, ok := <- ch
 			if !ok {
 				return
 			} else {
@@ -164,34 +163,22 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 		}
 	}()
 
-	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
-	type QueryAmountTask struct {
-		client *PaymentClient
-		index int
-	}
-	taskPool := make(chan QueryAmountTask, len(clients))
-	for i := 0; i < runtime.NumGoroutine(); i++ {
-		fense.Add(1)
-		go func() {
-			defer fense.Done()
-			for true {
-				task, ok := <-taskPool
-				if !ok {
-					return
-				}
-				accountinfoStr := task.client.GetState(task.index)
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				accountinfoStr := clients[i%clientamount].GetState(i)
 				var accountinfo accountInfo
 				accountinfo.FromBytes([]byte(accountinfoStr))
 				balance, _ := strconv.Atoi(string(accountinfo.Balance))
-				chTotalAmount <- balance
+				ch <- balance
 			}
-		}()
+		}(c)
 	}
-
-	for i := 0; i < accounts; i += len(clients) {
-		taskPool <- QueryAmountTask{clients[i%clientamount], i}
-	}
-	close(chTotalAmount)
+	w.Wait()
+	close(ch)
 
 	fense.Wait()
 	elapsed4Query = int(time.Since(start) / time.Millisecond)
@@ -227,36 +214,22 @@ func Transfer(clients []*PaymentClient) {
 	s1 := mrand.NewSource(time.Now().UnixNano())
 	r1 := mrand.New(s1)
 
-	// use fabricsdk.client send requests via the runtime.NumGoroutine() goroutines
-	type TransferTask struct {
-		client *PaymentClient
-		from int
-		to int
-	}
-	taskPool := make(chan TransferTask, len(clients))
-	for i := 0; i < runtime.NumGoroutine(); i++ {
-		fense.Add(1)
-		go func() {
-			defer fense.Done()
-			for true {
-				task, ok := <-taskPool
-				if !ok {
-					return
-				}
-				_, err := task.client.Transfer(task.from, task.to, amount)
+	var w sync.WaitGroup
+	for c, _ := range clients {
+		w.Add(1)
+		go func(cc int) {
+			defer w.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				from := r1.Intn(clientamount)
+				to := r1.Intn(clientamount)
+				_, err := clients[i%clientamount].Transfer(from, to, amount)
 				if err != nil {
 					txErrCh <- err.Error()
 				}
-
 			}
-		}()
+		}(c)
 	}
-
-	for i := 0; i < accounts; i += len(clients) {
-		from := r1.Intn(clientamount)
-		to := r1.Intn(clientamount)
-		taskPool <- TransferTask{clients[i%clientamount], from, to}
-	}
+	w.Wait()
 	close(txErrCh)
 
 	fense.Wait()
