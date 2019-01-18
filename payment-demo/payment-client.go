@@ -103,6 +103,7 @@ func Demo() error {
 	}
 	defer sdk.Close()
 
+	clientamount = accounts
 	logger.Infof("Creating %d clients", clientamount)
 	clients := make([]*PaymentClient, clientamount)
 	for i := 0; i < clientamount; i++ {
@@ -130,15 +131,20 @@ func CreateAccounts(clients []*PaymentClient) {
 	start := time.Now()
 
 	// crate accounts in the blockchain.
-	for c, _ := range clients {
-		fense.Add(1)
-		go func(cc int) {
-			defer fense.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				clients[i%clientamount].CreateAccount(i, "100")
-			}
-		}(c)
+	for i := 0; i < accounts; i ++ {
+		go func(ii int) {
+			clients[i].CreateAccount(ii, "100")
+		}(i)
 	}
+	//for c, _ := range clients {
+	//	fense.Add(1)
+	//	go func(cc int) {
+	//		defer fense.Done()
+	//		for i := cc; i < accounts; i += len(clients) {
+	//			clients[i%clientamount].CreateAccount(i, "100")
+	//		}
+	//	}(c)
+	//}
 	fense.Wait()
 	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
 }
