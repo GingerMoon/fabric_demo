@@ -24,7 +24,7 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-      - FPGA_MOCK=0
+      - FPGA_MOCK=1
       # - FPGA_SERVER_ADDR=172.17.0.1:50021
       - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
