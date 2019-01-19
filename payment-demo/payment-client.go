@@ -103,8 +103,7 @@ func Demo() error {
 		return errors.WithMessage(err, "Failed to create new SDK: %s")
 	}
 	defer sdk.Close()
-
-	clientamount = accounts
+	
 	logger.Infof("Creating %d clients", clientamount)
 	clients := make([]*PaymentClient, clientamount)
 	for i := 0; i < clientamount; i++ {
