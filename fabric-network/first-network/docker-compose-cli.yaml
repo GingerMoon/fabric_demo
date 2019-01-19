@@ -74,7 +74,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: ./peer node start # /bin/bash # 
+    command: peer node start # /bin/bash # 
 
     environment:
       # common environment
@@ -99,9 +99,9 @@ services:
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
       - CORE_PEER_LOCALMSPID=Org1MSP
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-      - FPGA_MOCK=0
-      - FPGA_SERVER_ADDR=172.17.0.1:50021
-      # - FPGA_SERVER_ADDR=127.0.0.1:10000
+      - FPGA_MOCK=1
+      # - FPGA_SERVER_ADDR=172.17.0.1:50021
+      - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
       - /dev/:/dev/
       - /var/run/:/host/var/run/
@@ -133,7 +133,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: ./peer node start # /bin/bash # 
+    command: peer node start # /bin/bash # 
     
     environment:
       # common environment
@@ -158,9 +158,9 @@ services:
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org2.example.com:7051
       - CORE_PEER_LOCALMSPID=Org2MSP
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-      - FPGA_MOCK=0
-      - FPGA_SERVER_ADDR=172.17.0.1:50021
-      # - FPGA_SERVER_ADDR=127.0.0.1:10000
+      - FPGA_MOCK=1
+      # - FPGA_SERVER_ADDR=172.17.0.1:50021
+      - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
       - /dev/:/dev/
       - /var/run/:/host/var/run/
