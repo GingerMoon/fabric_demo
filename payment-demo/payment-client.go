@@ -61,6 +61,7 @@ func (a *accountInfo) FromBytes(d []byte) error {
 }
 
 var (
+	// one client in one goroutine. If client amoutn is less than accounts, the tps of CreateAccount can be low.
 	clientamount, accounts, amount = getEnvironment()
 	elapsed4CreateAccounts = 0
 	elapsed4Transfer = 0
@@ -116,13 +117,13 @@ func Demo() error {
 
 	CreateAccounts(clients)
 
-	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	//Transfer(clients)
-	//logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	Transfer(clients)
+	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
 
-	//logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
 	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
-	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
 }
 
@@ -131,22 +132,22 @@ func CreateAccounts(clients []*PaymentClient) {
 	start := time.Now()
 
 	// crate accounts in the blockchain.
-	for i := 0; i < accounts; i ++ {
-		fense.Add(1)
-		go func(ii int) {
-			defer fense.Done()
-			clients[ii].CreateAccount(ii, "100")
-		}(i)
-	}
-	//for c, _ := range clients {
+	//for i := 0; i < accounts; i ++ {
 	//	fense.Add(1)
-	//	go func(cc int) {
+	//	go func(ii int) {
 	//		defer fense.Done()
-	//		for i := cc; i < accounts; i += len(clients) {
-	//			clients[i%clientamount].CreateAccount(i, "100")
-	//		}
-	//	}(c)
+	//		clients[ii].CreateAccount(ii, "100")
+	//	}(i)
 	//}
+	for c, _ := range clients {
+		fense.Add(1)
+		go func(cc int) {
+			defer fense.Done()
+			for i := cc; i < accounts; i += len(clients) {
+				clients[i%clientamount].CreateAccount(i, "100")
+			}
+		}(c)
+	}
 	fense.Wait()
 	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
 }
