@@ -74,7 +74,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: peer node start # /bin/bash # 
+    command: ./peer node start # /bin/bash # 
 
     environment:
       # common environment
@@ -133,7 +133,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: peer node start # /bin/bash # 
+    command: ./peer node start # /bin/bash # 
     
     environment:
       # common environment
