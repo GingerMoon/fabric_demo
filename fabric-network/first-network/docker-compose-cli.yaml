@@ -27,7 +27,7 @@ networks:
 services:
 
   zookeeper:
-    image: hyperledger/fabric-zookeeper:$IMAGE_TAG
+    image: hyperledger/fabric-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 32181
       ZOOKEEPER_TICK_TIME: 2000
@@ -47,7 +47,7 @@ services:
         constraints: [node.hostname == bingsu-15]
 
   kafka:
-    image: hyperledger/fabric-kafka:$IMAGE_TAG
+    image: hyperledger/fabric-kafka:latest
     depends_on:
     - zookeeper.example.com
     environment:
