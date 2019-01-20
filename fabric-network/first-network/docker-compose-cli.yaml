@@ -26,8 +26,7 @@ networks:
 
 services:
 
-  zookeeper.example.com:
-    container_name: zookeeper.example.com
+  zookeeper:
     image: hyperledger/fabric-zookeeper:$IMAGE_TAG
     environment:
       ZOOKEEPER_CLIENT_PORT: 32181
@@ -47,8 +46,7 @@ services:
       placement:
         constraints: [node.hostname == bingsu-15]
 
-  kafka.example.com:
-    container_name: kafka.example.com
+  kafka:
     image: hyperledger/fabric-kafka:$IMAGE_TAG
     depends_on:
     - zookeeper.example.com
