@@ -1,7 +1,8 @@
 #dep init
 go build
-# one client in one goroutine. If client amoutn is less than accounts, the tps of CreateAccount can be low.
-export CLIENT_AMOUNT=80
-export ACCOUNTS=1000
-export AMOUNT=60
+
+export CLIENT_AMOUNT=2 # not used in benchmark test
+export ACCOUNTS=2 # not used in benchmark test
+export AMOUNT=80
+
 ./payment-demo
