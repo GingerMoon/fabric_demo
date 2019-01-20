@@ -91,7 +91,7 @@ func getEnvironment() (int, int, string) {
 	if !ok {
 		logger.Fatalf("Please set environment variable AMOUNT")
 	}
-	clientamount, accounts = 2, 2
+	//clientamount, accounts = 2, 2
 	return clientamount, accounts, amount
 }
 
@@ -105,46 +105,50 @@ func Demo() error {
 	}
 	defer sdk.Close()
 	
-	//logger.Infof("Creating %d clients", clientamount)
-	//clients := make([]*PaymentClient, clientamount)
+	logger.Infof("Creating %d clients", clientamount)
+	clients := make([]*PaymentClient, clientamount)
+	for i := 0; i < clientamount; i++ {
+		client, err := New(sdk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		clients[i] = client
+	}
+
+	CreateAccounts(clients)
+	Transfer(clients)
+	GetNetworkTotalAmount(clients)
+
+	//var client4Create []*PaymentClient
 	//for i := 0; i < clientamount; i++ {
 	//	client, err := New(sdk)
 	//	if err != nil {
 	//		return errors.WithStack(err)
 	//	}
-	//	clients[i] = client
+	//	client4Create = append(client4Create, client)
 	//}
-
-	var client4Create []*PaymentClient
-	for i := 0; i < clientamount; i++ {
-		client, err := New(sdk)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		client4Create = append(client4Create, client)
-	}
-	CreateAccounts(client4Create)
-
-	var clientTransfer []*PaymentClient
-	for i := 0; i < clientamount; i++ {
-		client, err := New(sdk)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		clientTransfer = append(clientTransfer, client)
-	}
-	Transfer(clientTransfer)
-
-
-	var client4Q1 []*PaymentClient
-	for i := 0; i < clientamount; i++ {
-		client, err := New(sdk)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		client4Q1 = append(client4Q1, client)
-	}
-	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(client4Q1))
+	//CreateAccounts(client4Create)
+	//
+	//var clientTransfer []*PaymentClient
+	//for i := 0; i < clientamount; i++ {
+	//	client, err := New(sdk)
+	//	if err != nil {
+	//		return errors.WithStack(err)
+	//	}
+	//	clientTransfer = append(clientTransfer, client)
+	//}
+	//Transfer(clientTransfer)
+	//
+	//
+	//var client4Q1 []*PaymentClient
+	//for i := 0; i < clientamount; i++ {
+	//	client, err := New(sdk)
+	//	if err != nil {
+	//		return errors.WithStack(err)
+	//	}
+	//	client4Q1 = append(client4Q1, client)
+	//}
+	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(client4Q1))
 
 	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
 	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000*1000/elapsed4CreateAccounts) // the sdk will send the tx 1000 times in sdk.client request [txn.go ]
