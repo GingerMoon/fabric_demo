@@ -26,6 +26,59 @@ networks:
 
 services:
 
+  zookeeper.example.com:
+    container_name: zookeeper.example.com
+    image: hyperledger/fabric-zookeeper:$IMAGE_TAG
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      net_byfn:
+        aliases:
+          - zookeeper.example.com
+    deploy:
+      # resources:
+      #   limits:
+      #     cpus: '0.90'
+      #     memory: 25G
+      #   reservations:
+      #     cpus: '0.10'
+      #     memory: 20G
+      placement:
+        constraints: [node.hostname == bingsu-15]
+
+  kafka.example.com:
+    container_name: kafka.example.com
+    image: hyperledger/fabric-kafka:$IMAGE_TAG
+    depends_on:
+    - zookeeper.example.com
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper.example.com:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka.example.com:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_MESSAGE_MAX_BYTES=1048576 # 1 * 1024 * 1024 B
+      - KAFKA_REPLICA_FETCH_MAX_BYTES=1048576 # 1 * 1024 * 1024 B
+      - KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE=false
+      - KAFKA_LOG_RETENTION_MS=-1
+      - KAFKA_MIN_INSYNC_REPLICAS=1
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+    restart: on-failure
+    networks:
+      net_byfn:
+        aliases:
+          - kafka.example.com
+    deploy:
+      # resources:
+      #   limits:
+      #     cpus: '0.90'
+      #     memory: 25G
+      #   reservations:
+      #     cpus: '0.10'
+      #     memory: 20G
+      placement:
+        constraints: [node.hostname == bingsu-15]
+
   orderer:
     image: hyperledger/fabric-orderer:latest
     tty: true
@@ -42,6 +95,8 @@ services:
       - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_KAFKA_TOPIC_REPLICATIONFACTOR=1
+      - ORDERER_KAFKA_VERBOSE=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer # /bin/bash # 
     volumes:
@@ -50,6 +105,7 @@ services:
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
       - orderer.example.com:/var/hyperledger/production/orderer
+    restart: on-failure  
     ports:
       - 7050:7050
     networks:
@@ -65,7 +121,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-hw]
+        constraints: [node.hostname == bingsu-15]
 
 
   peer0org1:
@@ -213,12 +269,6 @@ services:
       - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
       - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
       - ../../payment-demo:/opt/gopath/src/github.com/hyperledger/fabric/peer/payment-demo
-    depends_on: # it doesn't work in swarm
-      - orderer
-      - peer0org1
-      - peer1org1
-      - peer0org2
-      - peer1org2
     networks:
       net_byfn:
         aliases:
