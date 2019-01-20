@@ -65,7 +65,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-sw15]
+        constraints: [node.hostname == bingsu-hw]
 
 
   peer0org1:
