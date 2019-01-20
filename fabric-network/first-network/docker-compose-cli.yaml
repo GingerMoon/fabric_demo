@@ -44,7 +44,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-15]
+        constraints: [node.hostname == bingsu-sw15]
 
   kafka:
     image: hyperledger/fabric-kafka:latest
@@ -61,7 +61,6 @@ services:
       - KAFKA_LOG_RETENTION_MS=-1
       - KAFKA_MIN_INSYNC_REPLICAS=1
       - KAFKA_DEFAULT_REPLICATION_FACTOR=1
-    restart: on-failure
     networks:
       net_byfn:
         aliases:
@@ -75,7 +74,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-15]
+        constraints: [node.hostname == bingsu-sw15]
 
   orderer:
     image: hyperledger/fabric-orderer:latest
@@ -103,7 +102,6 @@ services:
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
       - orderer.example.com:/var/hyperledger/production/orderer
-    restart: on-failure  
     ports:
       - 7050:7050
     networks:
@@ -119,7 +117,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-15]
+        constraints: [node.hostname == bingsu-sw15]
 
 
   peer0org1:
