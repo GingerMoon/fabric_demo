@@ -152,13 +152,13 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 	}
 
 	fense := sync.WaitGroup{}
-	//for i := 0; i < 999; i++ {
-	//	fense.Add(1)
-	//	go func() {
-	//		defer fense.Done()
-	//		broadcastEnvelope(reqCtx, envelope, orderers)
-	//	}()
-	//}
+	for i := 0; i < 100; i++ {
+		fense.Add(1)
+		go func() {
+			defer fense.Done()
+			broadcastEnvelope(reqCtx, envelope, orderers)
+		}()
+	}
 	r, e := broadcastEnvelope(reqCtx, envelope, orderers)
 	fense.Wait()
 	return r, e
