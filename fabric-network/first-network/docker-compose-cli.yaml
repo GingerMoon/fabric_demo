@@ -44,7 +44,7 @@ services:
       #     cpus: '0.10'
       #     memory: 20G
       placement:
-        constraints: [node.hostname == bingsu-sw]
+        constraints: [node.hostname == bingsu-sw15]
 
   kafka:
     image: hyperledger/fabric-kafka:latest
