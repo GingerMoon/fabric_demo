@@ -104,20 +104,23 @@ func Demo() error {
 		return errors.WithMessage(err, "Failed to create new SDK: %s")
 	}
 	defer sdk.Close()
-	
-	logger.Infof("Creating %d clients", clientamount)
-	clients := make([]*PaymentClient, clientamount)
-	for i := 0; i < clientamount; i++ {
-		client, err := New(sdk)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		clients[i] = client
-	}
 
-	CreateAccounts(clients)
-	Transfer(clients)
-	GetNetworkTotalAmount(clients)
+	client, _ := New(sdk)
+	client.CreateAccount(1, "100")
+
+	// logger.Infof("Creating %d clients", clientamount)
+	// clients := make([]*PaymentClient, clientamount)
+	// for i := 0; i < clientamount; i++ {
+	// 	client, err := New(sdk)
+	// 	if err != nil {
+	// 		return errors.WithStack(err)
+	// 	}
+	// 	clients[i] = client
+	// }
+
+	// CreateAccounts(clients)
+	// Transfer(clients)
+	// GetNetworkTotalAmount(clients)
 
 	//var client4Create []*PaymentClient
 	//for i := 0; i < clientamount; i++ {
@@ -150,9 +153,9 @@ func Demo() error {
 	//}
 	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(client4Q1))
 
-	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000*1000/elapsed4CreateAccounts) // the sdk will send the tx 1000 times in sdk.client request [txn.go ]
-	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000*1000/elapsed4Transfer) // the sdk will send the tx 1000 times in sdk.client request [txn.go ]
+	//logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	//logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000*1000/elapsed4CreateAccounts) // the sdk will send the tx 1000 times in sdk.client request [txn.go ]
+	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000*1000/elapsed4Transfer) // the sdk will send the tx 1000 times in sdk.client request [txn.go ]
 	return nil
 }
 
