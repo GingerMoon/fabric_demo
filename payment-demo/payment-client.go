@@ -106,9 +106,9 @@ func Demo() error {
 	defer sdk.Close()
 
 	client, _ := New(sdk)
-	//client.CreateAccount(1, "100")
+	client.CreateAccount(1, "100")
 	//client.CreateAccount(2, "100")
-	client.Transfer(1, 2, "10")
+	//client.Transfer(1, 2, "10")
 
 	// logger.Infof("Creating %d clients", clientamount)
 	// clients := make([]*PaymentClient, clientamount)
