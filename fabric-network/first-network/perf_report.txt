@@ -1,0 +1,52 @@
+ ------------------------------------------- std-no-duplicated txid check ------------------------------------------------------------------------------------
+sw12
+
+2019-01-22 12:02:34.006 UTC [gossip.privdata] StoreBlock -> INFO 123 [mychannel] Received block [18] from buffer
+2019-01-22 12:02:37.736 UTC [committer.txvalidator] Validate -> INFO 126 [mychannel] Validated block [18] in 3729ms
+2019-01-22 12:02:38.421 UTC [kvledger] CommitWithPvtData -> INFO 127 [mychannel] Committed block [18] with 5000 transaction(s) in 581ms (state_validation=170ms block_commit=283ms state_commit=10ms)
+2019-01-22 12:02:38.432 UTC [gossip.privdata] StoreBlock -> INFO 128 [mychannel] Received block [19] from buffer
+2019-01-22 12:02:42.232 UTC [committer.txvalidator] Validate -> INFO 129 [mychannel] Validated block [19] in 3799ms
+2019-01-22 12:02:42.941 UTC [kvledger] CommitWithPvtData -> INFO 12c [mychannel] Committed block [19] with 5000 transaction(s) in 603ms (state_validation=157ms block_commit=299ms state_commit=10ms)
+2019-01-22 12:02:42.954 UTC [gossip.privdata] StoreBlock -> INFO 12d [mychannel] Received block [20] from buffer
+2019-01-22 12:02:46.874 UTC [committer.txvalidator] Validate -> INFO 12e [mychannel] Validated block [20] in 3919ms
+2019-01-22 12:02:47.594 UTC [kvledger] CommitWithPvtData -> INFO 131 [mychannel] Committed block [20] with 5000 transaction(s) in 616ms (state_validation=173ms block_commit=299ms state_commit=10ms)
+2019-01-22 12:02:47.605 UTC [gossip.privdata] StoreBlock -> INFO 132 [mychannel] Received block [21] from buffer
+2019-01-22 12:02:51.328 UTC [committer.txvalidator] Validate -> INFO 133 [mychannel] Validated block [21] in 3721ms
+2019-01-22 12:02:52.054 UTC [kvledger] CommitWithPvtData -> INFO 134 [mychannel] Committed block [21] with 5000 transaction(s) in 611ms (state_validation=162ms block_commit=308ms state_commit=10ms)
+2019-01-22 12:02:52.065 UTC [gossip.privdata] StoreBlock -> INFO 135 [mychannel] Received block [22] from buffer
+2019-01-22 12:02:55.888 UTC [committer.txvalidator] Validate -> INFO 138 [mychannel] Validated block [22] in 3822ms
+2019-01-22 12:02:56.680 UTC [kvledger] CommitWithPvtData -> INFO 139 [mychannel] Committed block [22] with 5000 transaction(s) in 659ms (state_validation=164ms block_commit=328ms state_commit=10ms)
+2019-01-22 12:02:56.692 UTC [gossip.privdata] StoreBlock -> INFO 13a [mychannel] Received block [23] from buffer
+2019-01-22 12:03:00.308 UTC [committer.txvalidator] Validate -> INFO 13d [mychannel] Validated block [23] in 3616ms
+2019-01-22 12:03:01.003 UTC [kvledger] CommitWithPvtData -> INFO 13e [mychannel] Committed block [23] with 5000 transaction(s) in 591ms (state_validation=172ms block_commit=291ms state_commit=10ms)
+2019-01-22 12:03:01.006 UTC [gossip.privdata] StoreBlock -> INFO 13f [mychannel] Received block [24] from buffer
+2019-01-22 12:03:01.007 UTC [committer.txvalidator] Validate -> INFO 140 [mychannel] Validated block [24] in 1ms
+2019-01-22 12:03:01.065 UTC [kvledger] CommitWithPvtData -> INFO 141 [mychannel] Committed block [24] with 1 transaction(s) in 57ms (state_validation=0ms block_commit=36ms state_commit=10ms)
+
+
+sw13
+
+
+2019-01-22 13:57:33.709 UTC [gossip.privdata] StoreBlock -> INFO 17e [mychannel] Received block [18] from buffer
+2019-01-22 13:57:37.969 UTC [committer.txvalidator] Validate -> INFO 17f [mychannel] Validated block [18] in 4260ms
+2019-01-22 13:57:38.800 UTC [kvledger] CommitWithPvtData -> INFO 180 [mychannel] Committed block [18] with 5000 transaction(s) in 706ms (state_validation=186ms block_commit=353ms state_commit=17ms)
+2019-01-22 13:57:47.760 UTC [gossip.privdata] StoreBlock -> INFO 181 [mychannel] Received block [19] from buffer
+2019-01-22 13:57:51.940 UTC [committer.txvalidator] Validate -> INFO 182 [mychannel] Validated block [19] in 4180ms
+2019-01-22 13:57:52.736 UTC [kvledger] CommitWithPvtData -> INFO 183 [mychannel] Committed block [19] with 5000 transaction(s) in 670ms (state_validation=178ms block_commit=344ms state_commit=11ms)
+2019-01-22 13:57:52.747 UTC [gossip.privdata] StoreBlock -> INFO 184 [mychannel] Received block [20] from buffer
+2019-01-22 13:57:56.964 UTC [committer.txvalidator] Validate -> INFO 185 [mychannel] Validated block [20] in 4217ms
+2019-01-22 13:57:57.757 UTC [kvledger] CommitWithPvtData -> INFO 186 [mychannel] Committed block [20] with 5000 transaction(s) in 666ms (state_validation=180ms block_commit=328ms state_commit=11ms)
+2019-01-22 13:58:03.815 UTC [gossip.privdata] StoreBlock -> INFO 187 [mychannel] Received block [21] from buffer
+2019-01-22 13:58:07.907 UTC [committer.txvalidator] Validate -> INFO 188 [mychannel] Validated block [21] in 4092ms
+2019-01-22 13:58:08.747 UTC [kvledger] CommitWithPvtData -> INFO 189 [mychannel] Committed block [21] with 5000 transaction(s) in 721ms (state_validation=181ms block_commit=374ms state_commit=11ms)
+2019-01-22 13:58:08.758 UTC [gossip.privdata] StoreBlock -> INFO 18a [mychannel] Received block [22] from buffer
+2019-01-22 13:58:13.119 UTC [committer.txvalidator] Validate -> INFO 18b [mychannel] Validated block [22] in 4361ms
+2019-01-22 13:58:13.929 UTC [kvledger] CommitWithPvtData -> INFO 18c [mychannel] Committed block [22] with 5000 transaction(s) in 682ms (state_validation=178ms block_commit=345ms state_commit=11ms)
+2019-01-22 13:58:13.940 UTC [gossip.privdata] StoreBlock -> INFO 18d [mychannel] Received block [23] from buffer
+2019-01-22 13:58:18.038 UTC [committer.txvalidator] Validate -> INFO 18e [mychannel] Validated block [23] in 4097ms
+2019-01-22 13:58:18.832 UTC [kvledger] CommitWithPvtData -> INFO 18f [mychannel] Committed block [23] with 5000 transaction(s) in 667ms (state_validation=181ms block_commit=334ms state_commit=11ms)
+2019-01-22 13:58:18.834 UTC [gossip.privdata] StoreBlock -> INFO 190 [mychannel] Received block [24] from buffer
+2019-01-22 13:58:18.835 UTC [committer.txvalidator] Validate -> INFO 191 [mychannel] Validated block [24] in 1ms
+2019-01-22 13:58:18.902 UTC [kvledger] CommitWithPvtData -> INFO 192 [mychannel] Committed block [24] with 1 transaction(s) in 66ms (state_validation=0ms block_commit=43ms state_commit=11ms)
+
+------------------------------------------- std-no-duplicated txid check and no verification signature  ------------------------------------------------------------------------------------
