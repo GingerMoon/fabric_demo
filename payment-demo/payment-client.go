@@ -107,6 +107,7 @@ func Demo() error {
 
 	client, _ := New(sdk)
 	client.CreateAccount(1, "100")
+	client.CreateAccount(2, "100")
 
 	// logger.Infof("Creating %d clients", clientamount)
 	// clients := make([]*PaymentClient, clientamount)
