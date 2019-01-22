@@ -99,3 +99,81 @@ sw13
 2019-01-22 15:02:31.960 UTC [gossip.privdata] StoreBlock -> INFO 0b0 [mychannel] Received block [17] from buffer
 2019-01-22 15:02:31.961 UTC [committer.txvalidator] Validate -> INFO 0b1 [mychannel] Validated block [17] in 0ms
 2019-01-22 15:02:32.023 UTC [kvledger] CommitWithPvtData -> INFO 0b2 [mychannel] Committed block [17] with 1 transaction(s) in 61ms (state_validation=0ms block_commit=44ms state_commit=5ms)
+
+------------------------------------------- std-no-duplicated txid check and no vscc & mvcc and go verify return true ------------------------------------------------------------------------------------
+
+sw12
+
+2019-01-22 13:50:21.623 UTC [kvledger] CommitWithPvtData -> INFO 023 [mychannel] Committed block [0] with 1 transaction(s) in 71ms (state_validation=1ms block_commit=45ms state_commit=10ms)
+2019-01-22 13:50:21.636 UTC [ledgermgmt] CreateLedger -> INFO 024 Created ledger [mychannel] with genesis block
+2019-01-22 13:50:21.674 UTC [gossip.state] NewGossipStateProvider -> INFO 028 Updating metadata information, current ledger sequence is at = 0, next expected block is = 1
+2019-01-22 13:50:27.689 UTC [gossip.privdata] StoreBlock -> INFO 037 [mychannel] Received block [1] from buffer
+2019-01-22 13:50:27.697 UTC [committer.txvalidator] Validate -> INFO 03c [mychannel] Validated block [1] in 8ms
+2019-01-22 13:50:27.780 UTC [kvledger] CommitWithPvtData -> INFO 03d [mychannel] Committed block [1] with 1 transaction(s) in 82ms (state_validation=0ms block_commit=55ms state_commit=15ms)
+2019-01-22 13:50:27.780 UTC [gossip.privdata] StoreBlock -> INFO 03e [mychannel] Received block [2] from buffer
+2019-01-22 13:50:27.788 UTC [committer.txvalidator] Validate -> INFO 043 [mychannel] Validated block [2] in 7ms
+2019-01-22 13:50:27.864 UTC [kvledger] CommitWithPvtData -> INFO 044 [mychannel] Committed block [2] with 1 transaction(s) in 75ms (state_validation=0ms block_commit=54ms state_commit=10ms)
+2019-01-22 13:50:54.645 UTC [gossip.privdata] StoreBlock -> INFO 04c [mychannel] Received block [3] from buffer
+2019-01-22 13:50:54.647 UTC [committer.txvalidator] Validate -> INFO 04d [mychannel] Validated block [3] in 1ms
+2019-01-22 13:50:54.872 UTC [kvledger] CommitWithPvtData -> INFO 04f [mychannel] Committed block [3] with 1 transaction(s) in 224ms (state_validation=156ms block_commit=45ms state_commit=10ms)
+2019-01-22 13:51:37.935 UTC [gossip.privdata] StoreBlock -> INFO 06b [mychannel] Received block [4] from buffer
+2019-01-22 13:51:41.838 UTC [committer.txvalidator] Validate -> INFO 06c [mychannel] Validated block [4] in 3902ms
+2019-01-22 13:51:42.615 UTC [kvledger] CommitWithPvtData -> INFO 06d [mychannel] Committed block [4] with 5000 transaction(s) in 641ms (state_validation=175ms block_commit=318ms state_commit=10ms)
+2019-01-22 13:51:42.628 UTC [gossip.privdata] StoreBlock -> INFO 06e [mychannel] Received block [5] from buffer
+2019-01-22 13:51:46.289 UTC [committer.txvalidator] Validate -> INFO 071 [mychannel] Validated block [5] in 3661ms
+2019-01-22 13:51:47.148 UTC [kvledger] CommitWithPvtData -> INFO 072 [mychannel] Committed block [5] with 5000 transaction(s) in 724ms (state_validation=233ms block_commit=326ms state_commit=10ms)
+2019-01-22 13:51:47.161 UTC [gossip.privdata] StoreBlock -> INFO 073 [mychannel] Received block [6] from buffer
+2019-01-22 13:51:50.995 UTC [committer.txvalidator] Validate -> INFO 076 [mychannel] Validated block [6] in 3834ms
+2019-01-22 13:51:51.720 UTC [kvledger] CommitWithPvtData -> INFO 077 [mychannel] Committed block [6] with 5000 transaction(s) in 606ms (state_validation=154ms block_commit=314ms state_commit=10ms)
+2019-01-22 13:51:51.732 UTC [gossip.privdata] StoreBlock -> INFO 078 [mychannel] Received block [7] from buffer
+2019-01-22 13:51:55.538 UTC [committer.txvalidator] Validate -> INFO 07b [mychannel] Validated block [7] in 3805ms
+2019-01-22 13:51:56.248 UTC [kvledger] CommitWithPvtData -> INFO 07c [mychannel] Committed block [7] with 5000 transaction(s) in 607ms (state_validation=170ms block_commit=291ms state_commit=10ms)
+2019-01-22 13:51:56.259 UTC [gossip.privdata] StoreBlock -> INFO 07d [mychannel] Received block [8] from buffer
+2019-01-22 13:52:00.139 UTC [committer.txvalidator] Validate -> INFO 080 [mychannel] Validated block [8] in 3880ms
+2019-01-22 13:52:00.854 UTC [kvledger] CommitWithPvtData -> INFO 081 [mychannel] Committed block [8] with 5000 transaction(s) in 607ms (state_validation=159ms block_commit=310ms state_commit=12ms)
+2019-01-22 13:52:00.865 UTC [gossip.privdata] StoreBlock -> INFO 082 [mychannel] Received block [9] from buffer
+2019-01-22 13:52:04.584 UTC [committer.txvalidator] Validate -> INFO 085 [mychannel] Validated block [9] in 3719ms
+2019-01-22 13:52:05.346 UTC [kvledger] CommitWithPvtData -> INFO 086 [mychannel] Committed block [9] with 5000 transaction(s) in 657ms (state_validation=185ms block_commit=318ms state_commit=10ms)
+2019-01-22 13:52:05.348 UTC [gossip.privdata] StoreBlock -> INFO 087 [mychannel] Received block [10] from buffer
+2019-01-22 13:52:05.349 UTC [committer.txvalidator] Validate -> INFO 088 [mychannel] Validated block [10] in 1ms
+2019-01-22 13:52:05.428 UTC [kvledger] CommitWithPvtData -> INFO 089 [mychannel] Committed block [10] with 1 transaction(s) in 77ms (state_validation=0ms block_commit=56ms state_commit=10ms)
+
+
+sw13
+
+
+2019-01-22 15:54:58.692 UTC [kvledger] CommitWithPvtData -> INFO 023 [mychannel] Committed block [0] with 1 transaction(s) in 80ms (state_validation=1ms block_commit=55ms state_commit=11ms)
+2019-01-22 15:54:58.730 UTC [ledgermgmt] CreateLedger -> INFO 024 Created ledger [mychannel] with genesis block
+2019-01-22 15:54:58.770 UTC [gossip.state] NewGossipStateProvider -> INFO 028 Updating metadata information, current ledger sequence is at = 0, next expected block is = 1
+2019-01-22 15:55:08.777 UTC [gossip.privdata] StoreBlock -> INFO 043 [mychannel] Received block [1] from buffer
+2019-01-22 15:55:08.784 UTC [committer.txvalidator] Validate -> INFO 047 [mychannel] Validated block [1] in 7ms
+2019-01-22 15:55:32.241 UTC [kvledger] CommitWithPvtData -> INFO 04b [mychannel] Committed block [1] with 1 transaction(s) in 23456ms (state_validation=0ms block_commit=58ms state_commit=23380ms)
+2019-01-22 15:55:32.241 UTC [gossip.privdata] StoreBlock -> INFO 04c [mychannel] Received block [2] from buffer
+2019-01-22 15:55:32.250 UTC [committer.txvalidator] Validate -> INFO 052 [mychannel] Validated block [2] in 9ms
+2019-01-22 15:55:32.338 UTC [kvledger] CommitWithPvtData -> INFO 057 [mychannel] Committed block [2] with 1 transaction(s) in 86ms (state_validation=1ms block_commit=63ms state_commit=11ms)
+2019-01-22 15:55:38.650 UTC [blocksProvider] DeliverBlocks -> ERRO 059 [mychannel] Got error &{BAD_REQUEST}
+2019-01-22 15:55:42.248 UTC [gossip.privdata] StoreBlock -> INFO 05a [mychannel] Received block [3] from buffer
+2019-01-22 15:55:42.250 UTC [committer.txvalidator] Validate -> INFO 05b [mychannel] Validated block [3] in 1ms
+2019-01-22 15:55:42.509 UTC [kvledger] CommitWithPvtData -> INFO 05d [mychannel] Committed block [3] with 1 transaction(s) in 258ms (state_validation=170ms block_commit=65ms state_commit=11ms)
+2019-01-22 15:56:08.673 UTC [blocksProvider] DeliverBlocks -> ERRO 064 [mychannel] Wrong statuses threshold passed, stopping block provider
+2019-01-22 15:56:34.334 UTC [gossip.privdata] StoreBlock -> INFO 069 [mychannel] Received block [4] from buffer
+2019-01-22 15:56:38.682 UTC [committer.txvalidator] Validate -> INFO 06a [mychannel] Validated block [4] in 4348ms
+2019-01-22 15:56:39.487 UTC [kvledger] CommitWithPvtData -> INFO 06b [mychannel] Committed block [4] with 5000 transaction(s) in 680ms (state_validation=178ms block_commit=347ms state_commit=11ms)
+2019-01-22 15:56:50.352 UTC [gossip.privdata] StoreBlock -> INFO 06c [mychannel] Received block [5] from buffer
+2019-01-22 15:56:54.489 UTC [committer.txvalidator] Validate -> INFO 06d [mychannel] Validated block [5] in 4136ms
+2019-01-22 15:56:55.270 UTC [kvledger] CommitWithPvtData -> INFO 06e [mychannel] Committed block [5] with 5000 transaction(s) in 661ms (state_validation=173ms block_commit=333ms state_commit=11ms)
+2019-01-22 15:56:55.282 UTC [gossip.privdata] StoreBlock -> INFO 06f [mychannel] Received block [6] from buffer
+2019-01-22 15:56:59.533 UTC [committer.txvalidator] Validate -> INFO 070 [mychannel] Validated block [6] in 4251ms
+2019-01-22 15:57:00.326 UTC [kvledger] CommitWithPvtData -> INFO 071 [mychannel] Committed block [6] with 5000 transaction(s) in 672ms (state_validation=183ms block_commit=337ms state_commit=11ms)
+2019-01-22 15:57:00.337 UTC [gossip.privdata] StoreBlock -> INFO 072 [mychannel] Received block [7] from buffer
+2019-01-22 15:57:04.445 UTC [committer.txvalidator] Validate -> INFO 073 [mychannel] Validated block [7] in 4107ms
+2019-01-22 15:57:05.232 UTC [kvledger] CommitWithPvtData -> INFO 074 [mychannel] Committed block [7] with 5000 transaction(s) in 664ms (state_validation=176ms block_commit=345ms state_commit=11ms)
+2019-01-22 15:57:06.711 UTC [gossip.privdata] StoreBlock -> INFO 075 [mychannel] Received block [8] from buffer
+2019-01-22 15:57:10.710 UTC [committer.txvalidator] Validate -> INFO 076 [mychannel] Validated block [8] in 3998ms
+2019-01-22 15:57:11.507 UTC [kvledger] CommitWithPvtData -> INFO 077 [mychannel] Committed block [8] with 5000 transaction(s) in 675ms (state_validation=180ms block_commit=357ms state_commit=11ms)
+2019-01-22 15:57:11.517 UTC [gossip.privdata] StoreBlock -> INFO 078 [mychannel] Received block [9] from buffer
+2019-01-22 15:57:15.862 UTC [committer.txvalidator] Validate -> INFO 07f [mychannel] Validated block [9] in 4344ms
+2019-01-22 15:57:16.662 UTC [kvledger] CommitWithPvtData -> INFO 080 [mychannel] Committed block [9] with 5000 transaction(s) in 680ms (state_validation=180ms block_commit=344ms state_commit=11ms)
+2019-01-22 15:57:16.664 UTC [gossip.privdata] StoreBlock -> INFO 081 [mychannel] Received block [10] from buffer
+2019-01-22 15:57:16.665 UTC [committer.txvalidator] Validate -> INFO 082 [mychannel] Validated block [10] in 0ms
+2019-01-22 15:57:16.723 UTC [kvledger] CommitWithPvtData -> INFO 084 [mychannel] Committed block [10] with 1 transaction(s) in 57ms (state_validation=0ms block_commit=35ms state_commit=11ms)
