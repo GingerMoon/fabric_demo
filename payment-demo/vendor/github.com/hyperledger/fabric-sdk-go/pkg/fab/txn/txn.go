@@ -159,7 +159,7 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 	//		broadcastEnvelope(reqCtx, envelope, orderers)
 	//	}()
 	//}
-	//r, e := broadcastEnvelope(reqCtx, envelope, orderers)
+	r, e := broadcastEnvelope(reqCtx, envelope, orderers)
 	fense.Wait()
 	return r, e
 }
