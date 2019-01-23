@@ -20,9 +20,6 @@ peer chaincode install -n $CHAINCODE_NAME -v 1.0 -p github.com/chaincode/chainco
 peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C $CHANNEL_NAME -n $CHAINCODE_NAME -v 1.0 -c '{"Args":["init","a", "100", "b","200"]}' -P "AND ('Org1MSP.peer','Org2MSP.peer')"
 
 cd payment-demo/
-./start.sh
-
-
 
 #dep init
 go build
