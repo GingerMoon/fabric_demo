@@ -1,6 +1,9 @@
 Conclusion:
 Various locks/unlocks are the bottle neck in "Validated block" (TxValidator.Validate).
 The go verfiy occupies only approximately 11% (149.70/1351.08).
+Now vscc only verifies two signatures for one tx due to the policy we set. 
+If we make a more complicated policy, for example, one tx needs signatures of 10 orgs, then verification can become a bottle neck.
+
 Please refer to bitbucket.org/accelorteam/demo/performance/pprof001.svg for more details.
 
 *******************************
