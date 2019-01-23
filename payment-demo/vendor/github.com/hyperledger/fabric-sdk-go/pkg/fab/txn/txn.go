@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package txn
 
 import (
-	"sync"
+	//"sync"
 	reqContext "context"
 	"math/rand"
 
@@ -151,17 +151,18 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 		return nil, err
 	}
 
-	fense := sync.WaitGroup{}
-	for i := 0; i < 4999; i++ {
-		fense.Add(1)
-		go func() {
-			defer fense.Done()
-			broadcastEnvelope(reqCtx, envelope, orderers)
-		}()
-	}
-	r, e := broadcastEnvelope(reqCtx, envelope, orderers)
-	fense.Wait()
-	return r, e
+	return broadcastEnvelope(reqCtx, envelope, orderers)
+	//fense := sync.WaitGroup{}
+	//for i := 0; i < 4999; i++ {
+	//	fense.Add(1)
+	//	go func() {
+	//		defer fense.Done()
+	//		broadcastEnvelope(reqCtx, envelope, orderers)
+	//	}()
+	//}
+	//r, e := broadcastEnvelope(reqCtx, envelope, orderers)
+	//fense.Wait()
+	//return r, e
 }
 
 // broadcastEnvelope will send the given envelope to some orderer, picking random endpoints

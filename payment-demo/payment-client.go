@@ -105,8 +105,20 @@ func Demo() error {
 	}
 	defer sdk.Close()
 
-	client, _ := New(sdk)
-	client.CreateAccount(1, "100")
+	clients := make([]*PaymentClient, clientamount)
+	for i := 0; i < clientamount; i++ {
+		client, err := New(sdk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		clients[i] = client
+	}
+	CreateAccounts(clients)
+	Transfer(clients)
+	GetNetworkTotalAmount(clients)
+
+	//client, _ := New(sdk)
+	//client.CreateAccount(1, "100")
 	//client.CreateAccount(2, "100")
 	//client.Transfer(1, 2, "10")
 
