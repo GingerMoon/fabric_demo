@@ -1,0 +1,57 @@
+Conclusion:
+Various locks/unlocks are the bottle neck in "Validated block" (TxValidator.Validate).
+The go verfiy occupies only approximately 11% (149.70/1351.08).
+Please refer to bitbucket.org/accelorteam/demo/performance/pprof001.svg for more details.
+
+*******************************
+Fabric:
+respository: fabric
+branch: stdnoduptxidcheck_pprof
+commit: d7aae6bf68ed11327864a3417b64c0b2c7107092
+
+Based on the PURE Fabric code, the following modifications were made:
+
+1. Remove the check of duplicated TxId. 
+We did this because the sdk client had already been modified to send multiple exactly the same endorsed, signed txs in one go (sdk.client.exec() )
+commit: 81069d6dac463b935ff2c4d8e30c9e593dcb355c
+
+2. Triggered txvalidator.Valid 100 times in coordinator.StoreBlock for pprof. 1 time txvalidator.Valid is too short for pprof to profile.
+commit: d7aae6bf68ed11327864a3417b64c0b2c7107092
+
+*******************************
+Payment Demo:
+respository: demo
+branch: benchmark
+commit: 5547ef893752a2d0da4cf4630d27f571c6595ff2
+
+1. The sdk was changed to send 5000 signed, endorsed txs in one go (client.Execute)
+commit: 22fad4ef5a1f862cd500dab444e91b7c652843c4
+
+2. The client side now only executs
+    // payment-client.go [108-109] 
+    client, _ := New(sdk)   
+	client.CreateAccount(1, "100") // this will sends the same signed, endorsed txs 5000 times in one go.
+commit: cd97759bcaf428461072dd318d6cd227b072a00e
+*******************************
+Execution log:
+...
+2019-01-23 09:26:59.426 UTC [committer.txvalidator] Validate -> INFO 224 [mychannel] Validated block [6] in 3805ms
+2019-01-23 09:27:03.186 UTC [committer.txvalidator] Validate -> INFO 225 [mychannel] Validated block [6] in 3760ms
+2019-01-23 09:27:06.968 UTC [committer.txvalidator] Validate -> INFO 226 [mychannel] Validated block [6] in 3781ms
+2019-01-23 09:27:10.749 UTC [committer.txvalidator] Validate -> INFO 227 [mychannel] Validated block [6] in 3780ms
+2019-01-23 09:27:14.484 UTC [committer.txvalidator] Validate -> INFO 228 [mychannel] Validated block [6] in 3734ms
+2019-01-23 09:27:18.250 UTC [committer.txvalidator] Validate -> INFO 229 [mychannel] Validated block [6] in 3765ms
+2019-01-23 09:27:18.999 UTC [kvledger] CommitWithPvtData -> INFO 22a [mychannel] Committed block [6] with 5000 transaction(s) in 639ms (state_validat
+
+
+
+
+
+
+
+
+
+
+
+
+
