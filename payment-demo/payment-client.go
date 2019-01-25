@@ -119,7 +119,7 @@ func Demo() error {
 
 	for {
 		client, _ := New(sdk)
-		client.CreateAccount(1, "100")
+		go client.CreateAccount(1, "100")
 		//client.CreateAccount(2, "100")
 		//client.Transfer(1, 2, "10")
 		time.Sleep(4000 * time.Millisecond)
