@@ -2,23 +2,40 @@ The performance bottle neck found in "report - std fabric performance bottle nec
 This is because from Fabric 1.3, key level policy was introduced and for every tx in the block, fabric vscc will lock&unlock the state for (dependency & WriteSet-Metadata).
 After changed to v1.2, the ecdsa verify becomes the performance bottle neck as expected.
 
-The verify work occupies:
-259.72/466.58 = 55.66% -- from pprof svg
-The TPS of commiting peer:
-5000*1000/(1578+688) = 2206 -- from peer logs "Commit block" & "Validated block"
+The verify work occupies(from pprof svg):
+259.72/466.58 = 55.66%
+The TPS of commiting peer(from peer logs "Commit block" & "Validated block"):
+5000*1000/(1578+688) = 2206
 
 After the acceleration via FPGA (X10, only take vscc into account, I am still investigating on other bottle neck),
 The verify work occupies:
-25.972/466.58 = 5.566% -- from pprof svg
+25.972/466.58 = 5.566%
 The TPS of commiting peer:
-5000*1000/(157.8+688) = 5911 -- from peer logs "Commit block" & "Validated block"
+5000*1000/(157.8+688) = 5911
 
-NOTE: The data is from pprof test. Without the pprfo, the TPS should be higher. 
+P.S. 
+The data is from pprof test. Without the pprfo, the TPS should be higher. 
+After disable pprof, and make go's ecdsa/verify always return true, the std Fabric TPS is below:
+5000*1000/(513+705) = 4105 (on sw12)
+5000*1000/(593+660) = 3990 (on sw13)
+sw12
+2019-01-25 14:03:50.635 UTC [committer.txvalidator] Validate -> INFO 06a [mychannel] Validated block [4] in 513ms
+2019-01-25 14:03:51.462 UTC [kvledger] CommitWithPvtData -> INFO 06b [mychannel] Committed block [4] with 5000 transaction(s) in 705ms (state_validation=175ms block_commit=380ms state_commit=11ms)
+sw13
+2019-01-25 19:04:20.756 UTC [committer.txvalidator] Validate -> INFO 064 [mychannel] Validated block [4] in 593ms
+2019-01-25 19:04:21.539 UTC [kvledger] CommitWithPvtData -> INFO 065 [mychannel] Committed block [4] with 5000 transaction(s) in 660ms (state_validation=181ms block_commit=326ms state_commit=14ms)
+(The 5000 tx was triggered via hacking the sdk.client to send 5000 endorsed tx in one go.)
 
+
+
+
+
+**************************
+Test steps:
 The test steps are mostly the same as the ones mentioned in "report - std fabric performance bottle neck pprofv1 20190123.log".
 The only difference is, ApplicationCapabilities was changed from 1_3 to v1_2.
 
-
+**************************
 Test results:
 sw-12
 
