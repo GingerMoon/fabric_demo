@@ -1,0 +1,39 @@
+The performance bottle neck found in "report - std fabric performance bottle neck pprofv1.3 20190123.log" was Lock & RLock. 
+This is because from Fabric 1.3, key level policy was introduced and for every tx in the block, fabric vscc will lock&unlock the state for (dependency & WriteSet-Metadata).
+After changed to v1.2, the ecdsa verify becomes the performance bottle neck as expected.
+
+The verify work occupies:
+259.72/466.58 = 55.66% -- from pprof svg
+The TPS of commiting peer:
+5000*1000/(1578+688) = 2206 -- from peer logs "Commit block" & "Validated block"
+
+After the acceleration via FPGA (X10, only take vscc into account, I am still investigating on other bottle neck),
+The verify work occupies:
+25.972/466.58 = 5.566% -- from pprof svg
+The TPS of commiting peer:
+5000*1000/(157.8+688) = 5911 -- from peer logs "Commit block" & "Validated block"
+
+NOTE: The data is from pprof test. Without the pprfo, the TPS should be higher. 
+
+The test steps are mostly the same as the ones mentioned in "report - std fabric performance bottle neck pprofv1 20190123.log".
+The only difference is, ApplicationCapabilities was changed from 1_3 to v1_2.
+
+
+Test results:
+sw-12
+
+2019-01-25 12:55:04.849 UTC [committer.txvalidator] Validate -> INFO 0e8 [mychannel] Validated block [4] in 1037ms
+2019-01-25 12:55:05.934 UTC [committer.txvalidator] Validate -> INFO 0e9 [mychannel] Validated block [4] in 1085ms
+2019-01-25 12:55:07.184 UTC [committer.txvalidator] Validate -> INFO 0ea [mychannel] Validated block [4] in 1249ms
+2019-01-25 12:55:08.251 UTC [committer.txvalidator] Validate -> INFO 0eb [mychannel] Validated block [4] in 1066ms
+2019-01-25 12:55:09.061 UTC [kvledger] CommitWithPvtData -> INFO 0ec [mychannel] Committed block [4] with 5000 transaction(s) in 688ms (state_validation=173ms block_commit=353ms state_commit=17ms)
+
+sw-13
+
+2019-01-25 17:57:58.319 UTC [committer.txvalidator] Validate -> INFO 0ea [mychannel] Validated block [4] in 1301ms
+2019-01-25 17:57:59.663 UTC [committer.txvalidator] Validate -> INFO 0eb [mychannel] Validated block [4] in 1343ms
+2019-01-25 17:58:01.098 UTC [committer.txvalidator] Validate -> INFO 0ec [mychannel] Validated block [4] in 1434ms
+2019-01-25 17:58:02.677 UTC [committer.txvalidator] Validate -> INFO 0ed [mychannel] Validated block [4] in 1578ms
+2019-01-25 17:58:03.944 UTC [committer.txvalidator] Validate -> INFO 0ee [mychannel] Validated block [4] in 1267ms
+2019-01-25 17:58:05.217 UTC [committer.txvalidator] Validate -> INFO 0ef [mychannel] Validated block [4] in 1272ms
+2019-01-25 17:58:06.026 UTC [kvledger] CommitWithPvtData -> INFO 0f0 [mychannel] Committed block [4] with 5000 transaction(s) in 688ms (state_validation=179ms block_commit=349ms state_commit=11ms)
