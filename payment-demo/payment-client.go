@@ -133,9 +133,11 @@ func Demo() error {
 		clients[i] = client
 	}
 
-	CreateAccounts(clients)
-	Transfer(clients)
-	GetNetworkTotalAmount(clients)
+	for {
+		CreateAccounts(clients)
+		Transfer(clients)
+		GetNetworkTotalAmount(clients)
+	}
 
 	//var client4Create []*PaymentClient
 	//for i := 0; i < clientamount; i++ {
