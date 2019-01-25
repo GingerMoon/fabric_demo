@@ -162,6 +162,7 @@ services:
       - peer0.org1.example.com:/var/hyperledger/production
       - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
+      - 6060:6060
       - 7051:7051
       - 7053:7053
     networks:
@@ -221,6 +222,7 @@ services:
       - peer0.org2.example.com:/var/hyperledger/production
       - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
+      - 6060:6060
       - 9051:7051
       - 9053:7053
     networks:
