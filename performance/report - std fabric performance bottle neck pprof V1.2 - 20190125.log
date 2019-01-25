@@ -4,7 +4,7 @@ After changed to v1.2, the ecdsa verify becomes the performance bottle neck as e
 
 The verify work occupies(from pprof svg):
 259.72/466.58 = 55.66%
-The TPS of commiting peer(from peer logs "Commit block" & "Validated block"):
+The TPS of commiting peer(from peer logs "Commit block" & "Validated block", cannot calculate according to [received block-committed block ):
 5000*1000/(1578+688) = 2206
 
 After the acceleration via FPGA (X10, only take vscc into account, I am still investigating on other bottle neck),
@@ -15,15 +15,18 @@ The TPS of commiting peer:
 
 P.S. 
 The data is from pprof test. Without the pprfo, the TPS should be higher. 
-After disable pprof, and make go's ecdsa/verify always return true, the std Fabric TPS is below:
-5000*1000/(513+705) = 4105 (on sw12)
-5000*1000/(593+660) = 3990 (on sw13)
-sw12
-2019-01-25 14:03:50.635 UTC [committer.txvalidator] Validate -> INFO 06a [mychannel] Validated block [4] in 513ms
-2019-01-25 14:03:51.462 UTC [kvledger] CommitWithPvtData -> INFO 06b [mychannel] Committed block [4] with 5000 transaction(s) in 705ms (state_validation=175ms block_commit=380ms state_commit=11ms)
-sw13
-2019-01-25 19:04:20.756 UTC [committer.txvalidator] Validate -> INFO 064 [mychannel] Validated block [4] in 593ms
-2019-01-25 19:04:21.539 UTC [kvledger] CommitWithPvtData -> INFO 065 [mychannel] Committed block [4] with 5000 transaction(s) in 660ms (state_validation=181ms block_commit=326ms state_commit=14ms)
+After disable pprof, the std Fabric TPS is below:
+5000*1000/2003=2496
+2019-01-25 22:36:49.550 UTC [gossip.privdata] StoreBlock -> INFO 06a [mychannel] Received block [4] from buffer
+2019-01-25 22:36:50.743 UTC [committer.txvalidator] Validate -> INFO 06b [mychannel] Validated block [4] in 1192ms
+2019-01-25 22:36:51.553 UTC [kvledger] CommitWithPvtData -> INFO 06c [mychannel] Committed block [4] with 5000 transaction(s) in 689ms (state_validation=175ms block_commit=367ms state_commit=15ms)
+
+
+- After disable pprof, and make go's ecdsa/verify always return true, the std Fabric TPS is below:
+5000*1000/1272 = 3930
+2019-01-25 22:54:49.361 UTC [gossip.privdata] StoreBlock -> INFO 068 [mychannel] Received block [4] from buffer
+2019-01-25 22:54:49.815 UTC [committer.txvalidator] Validate -> INFO 06b [mychannel] Validated block [4] in 453ms
+2019-01-25 22:54:50.633 UTC [kvledger] CommitWithPvtData -> INFO 06c [mychannel] Committed block [4] with 5000 transaction(s) in 696ms (state_validation=175ms block_commit=364ms state_commit=11ms)
 (The 5000 tx was triggered via hacking the sdk.client to send 5000 endorsed tx in one go.)
 
 
