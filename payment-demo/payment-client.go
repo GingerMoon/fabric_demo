@@ -117,10 +117,14 @@ func Demo() error {
 	// Transfer(clients)
 	// GetNetworkTotalAmount(clients)
 
-	client, _ := New(sdk)
-	client.CreateAccount(1, "100")
-	//client.CreateAccount(2, "100")
-	//client.Transfer(1, 2, "10")
+	for {
+		client, _ := New(sdk)
+		client.CreateAccount(1, "100")
+		//client.CreateAccount(2, "100")
+		//client.Transfer(1, 2, "10")
+		time.Sleep(4000 * time.Millisecond)
+	}
+	
 
 	// logger.Infof("Creating %d clients", clientamount)
 	// clients := make([]*PaymentClient, clientamount)
@@ -374,7 +378,7 @@ func (c *PaymentClient) CreateAccount(index int, amount string) error {
 		channel.WithRetry(retry.DefaultChannelOpts))
 
 	if err != nil {
-		logger.Fatalf("Failed to create account: %s", err)
+		logger.Errorf("Failed to create account: %s", err)
 	}
 	logger.Infof("created account: %v - %v", index, amount)
 	return nil
@@ -388,7 +392,7 @@ func (c *PaymentClient) GetState(index int) string {
 		channel.WithRetry(retry.DefaultChannelOpts))
 
 	if err != nil {
-		logger.Fatalf("Failed to query funds: %s", err)
+		logger.Errorf("Failed to query funds: %s", err)
 	}
 	logger.Infof("%v : %v", index, string(response.Payload))
 	return string(response.Payload)
