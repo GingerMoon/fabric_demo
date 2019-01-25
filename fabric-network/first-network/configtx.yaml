@@ -153,11 +153,11 @@ Capabilities:
     Application: &ApplicationCapabilities
         # V1.3 for Application enables the new non-backwards compatible
         # features and fixes of fabric v1.3.
-        V1_3: true
+        # V1_3: true
         # V1.2 for Application enables the new non-backwards compatible
         # features and fixes of fabric v1.2 (note, this need not be set if
         # later version capabilities are set)
-        V1_2: false
+        V1_2: true
         # V1.1 for Application enables the new non-backwards compatible
         # features and fixes of fabric v1.1 (note, this need not be set if
         # later version capabilities are set).
