@@ -117,28 +117,25 @@ func Demo() error {
 	// Transfer(clients)
 	// GetNetworkTotalAmount(clients)
 
-	for {
-		client, _ := New(sdk)
-		go client.CreateAccount(1, "100")
-		//client.CreateAccount(2, "100")
-		//client.Transfer(1, 2, "10")
-		time.Sleep(4000 * time.Millisecond)
-	}
+	// client, _ := New(sdk)
+	// client.CreateAccount(1, "100")
+	//client.CreateAccount(2, "100")
+	//client.Transfer(1, 2, "10")
 	
 
-	// logger.Infof("Creating %d clients", clientamount)
-	// clients := make([]*PaymentClient, clientamount)
-	// for i := 0; i < clientamount; i++ {
-	// 	client, err := New(sdk)
-	// 	if err != nil {
-	// 		return errors.WithStack(err)
-	// 	}
-	// 	clients[i] = client
-	// }
+	logger.Infof("Creating %d clients", clientamount)
+	clients := make([]*PaymentClient, clientamount)
+	for i := 0; i < clientamount; i++ {
+		client, err := New(sdk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		clients[i] = client
+	}
 
-	// CreateAccounts(clients)
-	// Transfer(clients)
-	// GetNetworkTotalAmount(clients)
+	CreateAccounts(clients)
+	Transfer(clients)
+	GetNetworkTotalAmount(clients)
 
 	//var client4Create []*PaymentClient
 	//for i := 0; i < clientamount; i++ {
