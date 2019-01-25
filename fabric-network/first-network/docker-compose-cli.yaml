@@ -126,7 +126,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: ./peer_pprof node start # /bin/bash # 
+    command: ./peer_stdnoduptxidcheck_novsccmvcc_goverifytrue node start # /bin/bash # 
 
     environment:
       # common environment
@@ -139,7 +139,7 @@ services:
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_GOSSIP_USELEADERELECTION=true
       - CORE_PEER_GOSSIP_ORGLEADER=false
-      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
@@ -162,7 +162,7 @@ services:
       - peer0.org1.example.com:/var/hyperledger/production
       - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
-      - 7060:6060
+      # - 7060:6060 # CORE_PEER_PROFILE_ENABLED port
       - 7051:7051
       - 7053:7053
     networks:
@@ -186,7 +186,7 @@ services:
     stdin_open: true
     image: hyperledger/fabric-peer:latest
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: ./peer_pprof node start # /bin/bash # 
+    command: ./peer_stdnoduptxidcheck_novsccmvcc_goverifytrue node start # /bin/bash # 
     
     environment:
       # common environment
@@ -199,7 +199,7 @@ services:
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_GOSSIP_USELEADERELECTION=true
       - CORE_PEER_GOSSIP_ORGLEADER=false
-      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
@@ -222,7 +222,7 @@ services:
       - peer0.org2.example.com:/var/hyperledger/production
       - ../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     ports:
-      - 9060:6060
+      # - 9060:6060 # CORE_PEER_PROFILE_ENABLED port
       - 9051:7051
       - 9053:7053
     networks:
