@@ -220,12 +220,12 @@ Orderer: &OrdererDefaults
         MaxMessageCount: 10000
         # Absolute Max Bytes: The absolute maximum number of bytes allowed for
         # the serialized messages in a batch.
-        AbsoluteMaxBytes: 4056 MB
+        AbsoluteMaxBytes: 4095 MB
 
         # Preferred Max Bytes: The preferred maximum number of bytes allowed for
         # the serialized messages in a batch. A message larger than the preferred
         # max bytes will result in a batch larger than preferred max bytes.
-        PreferredMaxBytes: 4056 MB
+        PreferredMaxBytes: 4095 MB
 
     Kafka:
         # Brokers: A list of Kafka brokers to which the orderer connects
