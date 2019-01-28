@@ -95,13 +95,14 @@ services:
       - ORDERER_KAFKA_TOPIC_REPLICATIONFACTOR=1
       - ORDERER_KAFKA_VERBOSE=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
-    command: orderer # /bin/bash # 
+    command: ./orderer_pprof # /bin/bash # 
     volumes:
       - /dev/:/dev/
       - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
       - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
       - orderer.example.com:/var/hyperledger/production/orderer
+      - ../bin:/opt/gopath/src/github.com/hyperledger/fabric
     ports:
       - 7050:7050
     networks:
