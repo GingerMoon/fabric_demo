@@ -75,7 +75,7 @@ func New(opts ...options.Opt) *Dispatcher {
 // RegisterHandlers registers all of the handlers by event type
 func (ed *Dispatcher) RegisterHandlers() {
 	ed.RegisterHandler(&RegisterChaincodeEvent{}, ed.handleRegisterCCEvent)
-	ed.RegisterHandler(&RegisterTxStatusEvent{}, ed.handleRegisterTxStatusEvent)
+	//ed.RegisterHandler(&RegisterTxStatusEvent{}, ed.handleRegisterTxStatusEvent)
 	ed.RegisterHandler(&RegisterBlockEvent{}, ed.handleRegisterBlockEvent)
 	ed.RegisterHandler(&RegisterFilteredBlockEvent{}, ed.handleRegisterFilteredBlockEvent)
 	ed.RegisterHandler(&UnregisterEvent{}, ed.handleUnregisterEvent)
