@@ -118,7 +118,10 @@ func Demo() error {
 	// GetNetworkTotalAmount(clients)
 
 	client, _ := New(sdk)
-	client.CreateAccount(1, "100")
+	for {
+		client.CreateAccount(1, "100")
+		logger.Infof("New account created. Creating new account...")
+	}
 	//client.CreateAccount(2, "100")
 	//client.Transfer(1, 2, "10")
 	
