@@ -126,7 +126,11 @@ func Demo() error {
 	defer sdk.Close()
 
 	client, _ := New(sdk)
-	client.CreateAccount(1, "100")
+	go client.CreateAccount(1, "100")
+	select {
+	case <-time.After(2 * time.Second):
+		os.Exit(1)
+	}
 	//client.CreateAccount(2, "100")
 	//client.Transfer(1, 2, "10")
 	
