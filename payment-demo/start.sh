@@ -8,4 +8,5 @@ export AMOUNT=80
 for (( ; ; ))
 do
     ./payment-demo
+    sleep 2
 done
