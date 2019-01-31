@@ -97,13 +97,13 @@ func getEnvironment() (int, int, string) {
 
 func Demo() error {
 
-	logger.Info("initializing sdk...")
-	configPath := "config-payment.yaml"
-	sdk, err := fabsdk.New(config.FromFile(configPath))
-	if err != nil {
-		return errors.WithMessage(err, "Failed to create new SDK: %s")
-	}
-	defer sdk.Close()
+	//logger.Info("initializing sdk...")
+	//configPath := "config-payment.yaml"
+	//sdk, err := fabsdk.New(config.FromFile(configPath))
+	//if err != nil {
+	//	return errors.WithMessage(err, "Failed to create new SDK: %s")
+	//}
+	//defer sdk.Close()
 
 	// clients := make([]*PaymentClient, clientamount)
 	// for i := 0; i < clientamount; i++ {
@@ -118,6 +118,14 @@ func Demo() error {
 	// GetNetworkTotalAmount(clients)
 
 	for {
+		logger.Info("initializing sdk...")
+		configPath := "config-payment.yaml"
+		sdk, err := fabsdk.New(config.FromFile(configPath))
+		if err != nil {
+			return errors.WithMessage(err, "Failed to create new SDK: %s")
+		}
+		defer sdk.Close()
+
 		client, _ := New(sdk)
 		client.CreateAccount(1, "100")
 	}
