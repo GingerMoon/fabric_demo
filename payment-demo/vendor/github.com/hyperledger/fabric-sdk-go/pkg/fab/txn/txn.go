@@ -154,23 +154,16 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 
 	//smph := semaphore.NewWeighted(5000)
 	//errch := make(chan error, 5000)
-	////fense := sync.WaitGroup{}
-	//for i := 0; i < 5000; i++ {
-	//	smph.Acquire(reqContext.Background(), 1)
-	//	//fense.Add(1)
-	//	go func() {
-	//		defer smph.Release(1)
-	//		//defer fense.Done()
-	//		_, err := broadcastEnvelope(reqCtx, envelope, orderers)
-	//		errch <- err
-	//	}()
-	//}
-	//close(errch)
-	//for e := range errch{
-	//	if e != nil {
-	//		return nil, e
-	//	}
-	//}
+	//fense := sync.WaitGroup{}
+	for i := 0; i < 4999; i++ {
+		//smph.Acquire(reqContext.Background(), 1)
+		//fense.Add(1)
+		go func() {
+			//defer smph.Release(1)
+			//defer fense.Done()
+			broadcastEnvelope(reqCtx, envelope, orderers)
+		}()
+	}
 	//return nil, nil
 	r, e := broadcastEnvelope(reqCtx, envelope, orderers)
 	//fense.Wait()
