@@ -155,7 +155,7 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 	//smph := semaphore.NewWeighted(5000)
 	//errch := make(chan error, 5000)
 	//fense := sync.WaitGroup{}
-	for i := 0; i < 399; i++ {
+	for i := 0; i < 199; i++ {
 		//smph.Acquire(reqContext.Background(), 1)
 		//fense.Add(1)
 		go func() {
