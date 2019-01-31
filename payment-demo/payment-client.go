@@ -114,8 +114,8 @@ func Demo() error {
 		clients[i] = client
 	}
 	CreateAccounts(clients)
-	Transfer(clients)
-	GetNetworkTotalAmount(clients)
+	//Transfer(clients)
+	//GetNetworkTotalAmount(clients)
 
 	//for {
 	//	logger.Info("initializing sdk...")
