@@ -128,7 +128,8 @@ func Demo() error {
 	client, _ := New(sdk)
 	go client.CreateAccount(1, "100")
 	select {
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
+		logger.Infof("The process is exiting...")
 		os.Exit(1)
 	}
 	//client.CreateAccount(2, "100")
