@@ -95,7 +95,7 @@ services:
       - ORDERER_KAFKA_TOPIC_REPLICATIONFACTOR=1
       - ORDERER_KAFKA_VERBOSE=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
-    command: ./orderer_pprof # /bin/bash # 
+    command: orderer # /bin/bash #
     volumes:
       - /dev/:/dev/
       - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
