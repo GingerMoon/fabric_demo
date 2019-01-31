@@ -99,14 +99,18 @@ func Demo() error {
 
 	logger.Info("initializing sdk...")
 	configPath := "config-payment.yaml"
-	sdk, err := fabsdk.New(config.FromFile(configPath))
-	if err != nil {
-		return errors.WithMessage(err, "Failed to create new SDK: %s")
-	}
-	defer sdk.Close()
+	//sdk, err := fabsdk.New(config.FromFile(configPath))
+	//if err != nil {
+	//	return errors.WithMessage(err, "Failed to create new SDK: %s")
+	//}
+	//defer sdk.Close()
 
 	clients := make([]*PaymentClient, clientamount)
 	for i := 0; i < clientamount; i++ {
+		sdk, err := fabsdk.New(config.FromFile(configPath))
+		if err != nil {
+			return errors.WithMessage(err, "Failed to create new SDK: %s")
+		}
 		client, err := New(sdk)
 		if err != nil {
 			return errors.WithStack(err)
