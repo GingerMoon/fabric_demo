@@ -117,8 +117,8 @@ func Demo() error {
 	// Transfer(clients)
 	// GetNetworkTotalAmount(clients)
 
-	client, _ := New(sdk)
 	for {
+		client, _ := New(sdk)
 		client.CreateAccount(1, "100")
 	}
 	//client.CreateAccount(2, "100")
