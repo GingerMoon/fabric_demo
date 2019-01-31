@@ -269,10 +269,16 @@ func (o *Orderer) SendBroadcast(ctx reqContext.Context, envelope *fab.SignedEnve
 
 	go broadcastStream(broadcastClient, responses, errs)
 
-	err = broadcastClient.Send(&common.Envelope{
-		Payload:   envelope.Payload,
-		Signature: envelope.Signature,
-	})
+	for i := 0; i < 5000; i++ {
+		err = broadcastClient.Send(&common.Envelope{
+			Payload:   envelope.Payload,
+			Signature: envelope.Signature,
+		})
+	}
+	//err = broadcastClient.Send(&common.Envelope{
+	//	Payload:   envelope.Payload,
+	//	Signature: envelope.Signature,
+	//})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send envelope to orderer")
 	}

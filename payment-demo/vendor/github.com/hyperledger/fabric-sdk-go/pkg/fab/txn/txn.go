@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package txn
 
 import (
-	"sync"
-	"golang.org/x/sync/semaphore"
+	//"sync"
+	//"golang.org/x/sync/semaphore"
 	reqContext "context"
 	"math/rand"
 
@@ -152,29 +152,29 @@ func BroadcastPayload(reqCtx reqContext.Context, payload *common.Payload, ordere
 		return nil, err
 	}
 
-	smph := semaphore.NewWeighted(5000)
-	errch := make(chan error, 5000)
-	//fense := sync.WaitGroup{}
-	for i := 0; i < 5000; i++ {
-		smph.Acquire(reqContext.Background(), 1)
-		//fense.Add(1)
-		go func() {
-			defer smph.Release(1)
-			//defer fense.Done()
-			_, err := broadcastEnvelope(reqCtx, envelope, orderers)
-			errch <- err
-		}()
-	}
-	close(errch)
-	for e := range errch{
-		if e != nil {
-			return nil, e
-		}
-	}
-	return nil, nil
-	//r, e := broadcastEnvelope(reqCtx, envelope, orderers)
+	//smph := semaphore.NewWeighted(5000)
+	//errch := make(chan error, 5000)
+	////fense := sync.WaitGroup{}
+	//for i := 0; i < 5000; i++ {
+	//	smph.Acquire(reqContext.Background(), 1)
+	//	//fense.Add(1)
+	//	go func() {
+	//		defer smph.Release(1)
+	//		//defer fense.Done()
+	//		_, err := broadcastEnvelope(reqCtx, envelope, orderers)
+	//		errch <- err
+	//	}()
+	//}
+	//close(errch)
+	//for e := range errch{
+	//	if e != nil {
+	//		return nil, e
+	//	}
+	//}
+	//return nil, nil
+	r, e := broadcastEnvelope(reqCtx, envelope, orderers)
 	//fense.Wait()
-	//return r, e
+	return r, e
 }
 
 // broadcastEnvelope will send the given envelope to some orderer, picking random endpoints

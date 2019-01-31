@@ -120,7 +120,6 @@ func Demo() error {
 	for {
 		client, _ := New(sdk)
 		client.CreateAccount(1, "100")
-		logger.Infof("New account created. Creating another new account...")
 	}
 	//client.CreateAccount(2, "100")
 	//client.Transfer(1, 2, "10")
