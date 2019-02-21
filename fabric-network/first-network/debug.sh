@@ -9,7 +9,8 @@ function stop() {
 }
 
 function prune() {
-    docker rm -f $(docker ps -a | awk '($2 ~ /dev-peer.*.mycc.*/) {print $1}')
+    # docker rm -f $(docker ps -a | awk '($2 ~ /dev-peer.*.mycc.*/) {print $1}')
+    docker rm -f $(docker ps -aq)
     docker rmi -f $(docker images | awk '($1 ~ /dev-peer.*.mycc.*/) {print $3}')
     yes y | docker container prune
     yes y | docker image prune
