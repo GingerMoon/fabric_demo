@@ -18,6 +18,7 @@ const (
 	ECDSAKEY_FROM = "ECDSAKEY_FROM"
 	ECDSAKEY_TO   = "ECDSAKEY_TO"
 	IV            = "IV"
+	COLLECTION 	  = "collectionPayment"
 )
 
 var (
@@ -124,7 +125,7 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 }
 
 func (t *Paymentcc) getAccountInfo (stub shim.ChaincodeStubInterface, key string) (*accountInfo, error) {
-	accountInfobytes, err := stub.GetState(key)
+	accountInfobytes, err := stub.GetPrivateData(COLLECTION, key)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -159,7 +160,7 @@ func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, ba
 		return errors.WithStack(err)
 	}
 
-	err = stub.PutState(key, payload)
+	err = stub.PutPrivateData(COLLECTION, key, payload)
 	if err != nil {
 		return errors.WithStack(err)
 	}
