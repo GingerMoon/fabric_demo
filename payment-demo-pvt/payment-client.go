@@ -34,8 +34,7 @@ var logger = flogging.MustGetLogger("payment-demo")
 type payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount string `json:amount`
-	Blob   [2]byte `json:blob` // grpc limit & sha256
+	Amount int `json:amount`
 }
 
 func (a *payload) ToBytes() ([]byte, error) {
@@ -48,8 +47,7 @@ func (a *payload) FromBytes(d []byte) error {
 
 
 type accountInfo struct {
-	Balance string  `json: "balance"`
-	Blob    [2]byte `json: "blob"` // 1G exceeds the limitation of gRPC
+	Balance int  `json: "balance"`
 }
 
 func (a *accountInfo) ToBytes() ([]byte, error) {
@@ -67,7 +65,7 @@ var (
 	elapsed4Query = 0
 )
 
-func getEnvironment() (int, int, string) {
+func getEnvironment() (int, int, int) {
 	val, ok := os.LookupEnv("CLIENT_AMOUNT")
 	if !ok {
 		logger.Fatalf("Please set environment variable CLIENT_AMOUNT")
@@ -86,10 +84,15 @@ func getEnvironment() (int, int, string) {
 		logger.Fatalf("Illeagle environment variable ACCOUNTS: %s", val)
 	}
 
-	amount, ok := os.LookupEnv("AMOUNT")
+	val, ok = os.LookupEnv("AMOUNT")
 	if !ok {
 		logger.Fatalf("Please set environment variable AMOUNT")
 	}
+	amount, err := strconv.Atoi(val)
+	if err != nil {
+		logger.Fatalf("Illeagle environment variable AMOUNT: %s", val)
+	}
+
 	return clientamount, accounts, amount
 }
 
@@ -114,7 +117,6 @@ func Demo() error {
 	}
 
 	CreateAccounts(clients)
-	Transfer(clients)
 
 	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
 	Transfer(clients)
@@ -136,7 +138,7 @@ func CreateAccounts(clients []*PaymentClient) {
 		go func(cc int) {
 			defer fense.Done()
 			for i := cc; i < accounts; i += len(clients) {
-				clients[i%clientamount].CreateAccount(i, "100")
+				clients[i%clientamount].CreateAccount(i, 100)
 			}
 		}(c)
 	}
@@ -173,8 +175,7 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 				accountinfoStr := clients[i%clientamount].GetState(i)
 				var accountinfo accountInfo
 				accountinfo.FromBytes([]byte(accountinfoStr))
-				balance, _ := strconv.Atoi(string(accountinfo.Balance))
-				ch <- balance
+				ch <- accountinfo.Balance
 			}
 		}(c)
 	}
@@ -306,7 +307,7 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 	return totalAmount
 }
 
-func (c *PaymentClient) CreateAccount(index int, amount string) error {
+func (c *PaymentClient) CreateAccount(index, amount int) error {
 	tmp := payload{From: "", To: strconv.Itoa(index), Amount: amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
@@ -340,7 +341,7 @@ func (c *PaymentClient) GetState(index int) string {
 	return string(response.Payload)
 }
 
-func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
+func (c *PaymentClient) Transfer(from, to, amount int) (string, error) {
 	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), Amount: amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
@@ -350,7 +351,7 @@ func (c *PaymentClient) Transfer(from, to int, amount string) (string, error) {
 	args := [][]byte{payload}
 
 	response, err := c.client.Execute(
-		channel.Request{ChaincodeID: ccID, Fcn: "transfer", TransientMap: args},
+		channel.Request{ChaincodeID: ccID, Fcn: "transfer", Args: args},
 		channel.WithRetry(retry.DefaultChannelOpts))
 
 	if err != nil {
