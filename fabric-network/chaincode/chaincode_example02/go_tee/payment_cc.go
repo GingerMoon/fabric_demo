@@ -3,39 +3,22 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/factory"
-	"github.com/pkg/errors"
-	"strconv"
-
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-)
-
-const (
-	AESKEY        = "AESKEY"
-	ECDSAKEY      = "ECDSAKEY_PRI"
-	ECDSAKEY_FROM = "ECDSAKEY_FROM"
-	ECDSAKEY_TO   = "ECDSAKEY_TO"
-	IV            = "IV"
-	COLLECTION 	  = "collectionPayment"
+	"github.com/pkg/errors"
+	"os"
 )
 
 var (
-	logger = shim.NewLogger("payment_cc")
-	iv     = make([]byte, 16)
+	//logger = shim.NewLogger("payment_cc")
+	logger = flogging.MustGetLogger("payment_cc")
 )
-
-// Paymentcc example simple Chaincode implementation
-type Paymentcc struct {
-	bccspInst bccsp.BCCSP
-}
 
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount string `json:amount`
-	Blob   [2]byte `json:blob`
+	Amount int `json:amount`
 }
 
 func (a *Payload) ToBytes() ([]byte, error) {
@@ -47,8 +30,7 @@ func (a *Payload) FromBytes(d []byte) error {
 }
 
 type accountInfo struct {
-	Balance string  `json: "balance"`
-	Blob    [2]byte `json: "blob"` // 1G exceeds the limitation of gRPC
+	Balance int  `json: "balance"`
 }
 
 func (a *accountInfo) ToBytes() ([]byte, error) {
@@ -57,6 +39,11 @@ func (a *accountInfo) ToBytes() ([]byte, error) {
 
 func (a *accountInfo) FromBytes(d []byte) error {
 	return json.Unmarshal(d, a)
+}
+
+
+// Paymentcc example simple Chaincode implementation
+type Paymentcc struct {
 }
 
 func (t *Paymentcc) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -96,10 +83,6 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
-	if _, err := strconv.Atoi(payload.Amount); err != nil {
-		return shim.Error("Expecting integer value for asset holding")
-	}
-
 	err := t.putBalance(stub, payload.To, payload.Amount)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
@@ -125,7 +108,7 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 }
 
 func (t *Paymentcc) getAccountInfo (stub shim.ChaincodeStubInterface, key string) (*accountInfo, error) {
-	accountInfobytes, err := stub.GetPrivateData(COLLECTION, key)
+	accountInfobytes, err := stub.GetState(key)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -142,15 +125,10 @@ func (t *Paymentcc) getBalance (stub shim.ChaincodeStubInterface, key string) (i
 		return -1, errors.WithStack(errors.WithMessage(err, fmt.Sprintf("get account for %s failed.", key)))
 	}
 
-	balance, err := strconv.Atoi(account.Balance)
-	if err != nil {
-		return -1, errors.WithStack(err)
-	}
-
-	return balance, err
+	return account.Balance, err
 }
 
-func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, balance string) error {
+func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, balance int) error {
 	logger.Infof("put %s : %s", key, balance)
 
 	// sign, then encrypt, then put state
@@ -160,7 +138,7 @@ func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, ba
 		return errors.WithStack(err)
 	}
 
-	err = stub.PutPrivateData(COLLECTION, key, payload)
+	err = stub.PutState(key, payload)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -179,6 +157,10 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
+	if payload.From == payload.To {
+		return shim.Success(nil)
+	}
+
 	// get balance of A and B
 	balanceA, err := t.getBalance(stub, payload.From)
 	if err != nil {
@@ -192,21 +174,17 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	}
 	logger.Infof("before transfer, %s's balance is %d", payload.To, balanceB)
 
-	// check if A's balance is enough or not and if YES transfer (A-x, B+x)
-	X, _ := strconv.Atoi(string(payload.Amount))
-	logger.Infof("transfer v% from %s to %s", X, payload.From, payload.To)
-
-	balanceA = balanceA - X
+	balanceA = balanceA - payload.Amount
 	if balanceA < 0 {
-		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA + X, X))
+		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA + payload.Amount, payload.Amount))
 	}
-	err = t.putBalance(stub, payload.From, strconv.Itoa(balanceA))
+	err = t.putBalance(stub, payload.From, balanceA)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[0])).Error())
 	}
 
-	balanceB = balanceB + X
-	t.putBalance(stub, payload.To, strconv.Itoa(balanceB))
+	balanceB = balanceB + payload.Amount
+	t.putBalance(stub, payload.To, balanceB)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[1])).Error())
 	}
@@ -216,10 +194,12 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 }
 
 func main() {
-	logger.SetLevel(shim.LogInfo)
+	flogging.Init(flogging.Config{
+		Writer:  os.Stderr,
+		LogSpec: "DEBUG",
+	})
 
-	factory.InitFactories(nil)
-	err := shim.Start(&Paymentcc{factory.GetDefault()})
+	err := shim.Start(&Paymentcc{})
 	if err != nil {
 		logger.Errorf("Error starting payment chaincode: %s", err)
 	}
