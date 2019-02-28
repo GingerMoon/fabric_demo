@@ -4,6 +4,7 @@ package main
 
 import (
 	"container/list"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
@@ -42,19 +43,6 @@ func (a *payload) ToBytes() ([]byte, error) {
 }
 
 func (a *payload) FromBytes(d []byte) error {
-	return json.Unmarshal(d, a)
-}
-
-
-type accountInfo struct {
-	Balance int  `json: "balance"`
-}
-
-func (a *accountInfo) ToBytes() ([]byte, error) {
-	return json.Marshal(a)
-}
-
-func (a *accountInfo) FromBytes(d []byte) error {
 	return json.Unmarshal(d, a)
 }
 
@@ -116,15 +104,26 @@ func Demo() error {
 		clients[i] = client
 	}
 
-	CreateAccounts(clients)
+	clients[0].GetState(0)
+	clients[0].GetState(1)
+	clients[0].CreateAccount(0, 100)
+	clients[0].CreateAccount(1, 100)
+	txid, err := clients[0].Transfer(0, 1, amount)
+	if err != nil {
+		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
+	} else {
+		logger.Errorf("transfer from 0 to 1 succeed. txid: %v", txid)
+	}
 
-	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	Transfer(clients)
-	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-
-	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
-	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	//CreateAccounts(clients)
+	//
+	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//Transfer(clients)
+	//logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//
+	//logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	//logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
 }
 
@@ -172,10 +171,8 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 		go func(cc int) {
 			defer w.Done()
 			for i := cc; i < accounts; i += len(clients) {
-				accountinfoStr := clients[i%clientamount].GetState(i)
-				var accountinfo accountInfo
-				accountinfo.FromBytes([]byte(accountinfoStr))
-				ch <- accountinfo.Balance
+				balance := clients[i%clientamount].GetState(i)
+				ch <- balance
 			}
 		}(c)
 	}
@@ -298,10 +295,7 @@ func (c *PaymentClient) transfer() {
 func (c *PaymentClient) GetNetworkTotalAmount() int {
 	totalAmount := 0
 	for i := 0; i < clientamount; i++ {
-		accountinfoStr := c.GetState(i)
-		var accountinfo accountInfo
-		accountinfo.FromBytes([]byte(accountinfoStr))
-		balance, _ := strconv.Atoi(string(accountinfo.Balance))
+		balance := c.GetState(i)
 		totalAmount += balance
 	}
 	return totalAmount
@@ -327,7 +321,7 @@ func (c *PaymentClient) CreateAccount(index, amount int) error {
 	return nil
 }
 
-func (c *PaymentClient) GetState(index int) string {
+func (c *PaymentClient) GetState(index int) int {
 	args := [][]byte{[]byte(strconv.Itoa(index))}
 
 	response, err := c.client.Query(
@@ -337,11 +331,12 @@ func (c *PaymentClient) GetState(index int) string {
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
 	}
-	logger.Infof("%v : %v", index, string(response.Payload))
-	return string(response.Payload)
+	balance := binary.LittleEndian.Uint32(response.Payload)
+	logger.Infof("%v : %v", index, balance)
+	return int(balance)
 }
 
-func (c *PaymentClient) Transfer(from, to, amount int) (string, error) {
+func (c *PaymentClient)  Transfer(from, to, amount int) (string, error) {
 	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), Amount: amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {

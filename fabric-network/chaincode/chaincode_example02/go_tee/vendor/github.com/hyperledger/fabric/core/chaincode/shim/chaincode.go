@@ -12,6 +12,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/hyperledger/fabric/core/chaincode/shim/tee"
 	"io"
 	"io/ioutil"
 	"os"
@@ -940,6 +941,10 @@ func (iter *CommonIterator) nextResult(rType resultType) (commonledger.QueryResu
 func (iter *CommonIterator) Close() error {
 	_, err := iter.handler.handleQueryStateClose(iter.response.Id, iter.channelId, iter.txid)
 	return err
+}
+
+func (stub *ChaincodeStub) TeeExecute(args [][]byte) ([][]byte, error) {
+	return tee.Execute(args)
 }
 
 // GetArgs documentation can be found in interfaces.go

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -18,7 +19,7 @@ var (
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount int `json:amount`
+	Amount uint32 `json:amount`
 }
 
 func (a *Payload) ToBytes() ([]byte, error) {
@@ -28,19 +29,6 @@ func (a *Payload) ToBytes() ([]byte, error) {
 func (a *Payload) FromBytes(d []byte) error {
 	return json.Unmarshal(d, a)
 }
-
-type accountInfo struct {
-	Balance int  `json: "balance"`
-}
-
-func (a *accountInfo) ToBytes() ([]byte, error) {
-	return json.Marshal(a)
-}
-
-func (a *accountInfo) FromBytes(d []byte) error {
-	return json.Unmarshal(d, a)
-}
-
 
 // Paymentcc example simple Chaincode implementation
 type Paymentcc struct {
@@ -83,7 +71,9 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
-	err := t.putBalance(stub, payload.To, payload.Amount)
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, payload.Amount)
+	err := stub.PutState(payload.To, bs)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
 	}
@@ -98,57 +88,18 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 
 	key := args[0]
-	account, err := t.getAccountInfo(stub, key)
-	cleartextValue, err := account.ToBytes()
+	balance, err := stub.GetState(key)
 	if err != nil {
-		return shim.Error(fmt.Sprintf("getStateDecryptAndVerify failed, err %+v", err))
+		return shim.Error(fmt.Sprintf("GetState %s failed. Err: %s", key, err.Error()))
 	}
 
-	return shim.Success(cleartextValue)
-}
-
-func (t *Paymentcc) getAccountInfo (stub shim.ChaincodeStubInterface, key string) (*accountInfo, error) {
-	accountInfobytes, err := stub.GetState(key)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	var account accountInfo
-	account.FromBytes(accountInfobytes)
-
-	return &account, nil
-}
-
-func (t *Paymentcc) getBalance (stub shim.ChaincodeStubInterface, key string) (int, error) {
-	account, err := t.getAccountInfo(stub, key)
-	if err != nil {
-		return -1, errors.WithStack(errors.WithMessage(err, fmt.Sprintf("get account for %s failed.", key)))
-	}
-
-	return account.Balance, err
-}
-
-func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, balance int) error {
-	logger.Infof("put %s : %s", key, balance)
-
-	// sign, then encrypt, then put state
-	a := accountInfo{Balance: balance}
-	payload, err := a.ToBytes()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	err = stub.PutState(key, payload)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+	return shim.Success(balance)
 }
 
 // Transfer from A to B.
 // arg0 is payload
 func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
@@ -162,34 +113,35 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	}
 
 	// get balance of A and B
-	balanceA, err := t.getBalance(stub, payload.From)
+	balanceA, err := stub.GetState(payload.From)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.From)).Error())
 	}
-	logger.Infof("before transfer, %s's balance is %d", payload.From, balanceA)
 
-	balanceB, err := t.getBalance(stub, payload.To)
+	balanceB, err := stub.GetState(payload.To)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.To)).Error())
 	}
-	logger.Infof("before transfer, %s's balance is %d", payload.To, balanceB)
 
-	balanceA = balanceA - payload.Amount
-	if balanceA < 0 {
-		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA + payload.Amount, payload.Amount))
-	}
-	err = t.putBalance(stub, payload.From, balanceA)
+	bsAmout := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bsAmout, payload.Amount)
+
+	var teeArgs [][]byte
+	teeArgs = append(teeArgs, []byte("paymentCCtee"))
+	teeArgs = append(teeArgs, balanceA)
+	teeArgs = append(teeArgs, balanceB)
+	teeArgs = append(teeArgs, bsAmout)
+
+	results, err := stub.TeeExecute(teeArgs)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[0])).Error())
+		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
 	}
-
-	balanceB = balanceB + payload.Amount
-	t.putBalance(stub, payload.To, balanceB)
-	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[1])).Error())
+	if len(results) != 2 {
+		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results)))
 	}
+	stub.PutState(payload.From, results[0])
+	stub.PutState(payload.To, results[1])
 
-	fmt.Printf("balanceA = %d, balanceB = %d\n", balanceA, balanceB)
 	return shim.Success(nil)
 }
 

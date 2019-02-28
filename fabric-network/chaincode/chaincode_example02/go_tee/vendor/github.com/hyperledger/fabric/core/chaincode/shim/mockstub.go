@@ -77,6 +77,10 @@ func (stub *MockStub) GetChannelID() string {
 	return stub.ChannelID
 }
 
+func (stub *MockStub) TeeExecute(args [][]byte) ([][]byte, error) {
+	return nil, nil
+}
+
 func (stub *MockStub) GetArgs() [][]byte {
 	return stub.args
 }
