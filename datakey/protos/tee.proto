@@ -1,0 +1,37 @@
+/*
+cd /c/goworkspace/src/github.com/hyperledger/fabric/protos
+protoc -I ./ tee/tee.proto --go_out=plugins=grpc:./
+*/
+
+/*
+if cpp:
+protoc --protoc_path=./ --protoc_path=whatever_path_to_fabric/protos
+*/
+
+syntax = "proto3";
+
+//option go_package = "github.com/hyperledger/fabric/protos/tee";
+
+package protos;
+
+import "google/protobuf/empty.proto";
+
+
+// Interface exported by the server.
+service Tee {
+    rpc Execute(TeeArgs) returns (TeeResp) {}
+    rpc ExchangeDataKey(DataKeyArgs) returns (google.protobuf.Empty) {}
+}
+
+message TeeArgs {
+    repeated bytes args = 1;
+}
+
+message TeeResp {
+    repeated bytes results = 1;
+}
+
+message DataKeyArgs {
+    bytes datakey = 1; // the encrypted AES key
+    bytes label = 2; // rsa label
+}
