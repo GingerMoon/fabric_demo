@@ -1,9 +1,8 @@
-package tee
+package main
 
 import (
 	"context"
-	"github.com/hyperledger/fabric/common/flogging"
-	pb "github.com/hyperledger/fabric/protos/tee"
+	pb "github.com/hyperledger/fabric/peer/datakey/protos"
 	"google.golang.org/grpc"
 	"os"
 	"strconv"
@@ -11,7 +10,6 @@ import (
 )
 
 var (
-	logger = flogging.MustGetLogger("tee")
 	serverAddr = os.Getenv("TEE_FPGA_SERVER_ADDR")
 
 	workers     []*worker
@@ -19,12 +17,11 @@ var (
 )
 
 type out struct {
-	respCh chan <- [][]byte
 	errCh chan <- error
 }
 
 type task struct {
-	in  *pb.TeeArgs
+	in  *pb.DataKeyArgs
 	out *out
 }
 
@@ -40,13 +37,11 @@ func(w *worker) start() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			response, err := w.conn.Execute(ctx, task.in)
+			_, err := w.conn.ExchangeDataKey(ctx, task.in)
 			if err != nil {
 				logger.Errorf("Execute() failed!  %v: ", err)
-				task.out.respCh <- nil
 				task.out.errCh <- err
 			} else {
-				task.out.respCh <- response.Results
 				task.out.errCh <- nil
 			}
 		}()
@@ -57,7 +52,7 @@ func init() {
 	val := os.Getenv("TEE_FPGA_WORKERS")
 	nWorkers, err := strconv.Atoi(val)
 	if err != nil {
-		logger.Warnf("TEE_FPGA_WORKERS %s is illegal! Now set it to 10.", val)
+		logger.Warningf("TEE_FPGA_WORKERS %s is illegal! Now set it to 10.", val)
 	}
 	if nWorkers == 0 {
 		nWorkers = 10
@@ -86,9 +81,8 @@ func createTeeClient() pb.TeeClient {
 	return pb.NewTeeClient(conn)
 }
 
-func Execute(args [][]byte) (resp [][]byte, err error) {
-	respCh := make(chan [][]byte)
+func ExchangeDataKey(datakey, label []byte) error {
 	errCh := make(chan error)
-	taskPool <- &task{&pb.TeeArgs{Args:args}, &out{respCh, errCh}}
-	return <-respCh, <-errCh
+	taskPool <- &task{&pb.DataKeyArgs{Datakey:datakey, Label:label}, &out{errCh}}
+	return <-errCh
 }

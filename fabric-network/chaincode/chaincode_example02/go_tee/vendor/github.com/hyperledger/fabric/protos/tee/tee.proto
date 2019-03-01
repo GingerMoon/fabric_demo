@@ -14,10 +14,13 @@ syntax = "proto3";
 
 package protos;
 
+import "google/protobuf/empty.proto";
+
 
 // Interface exported by the server.
 service Tee {
     rpc Execute(TeeArgs) returns (TeeResp) {}
+    rpc ExchangeDataKey(DataKeyArgs) returns (google.protobuf.Empty) {}
 }
 
 message TeeArgs {
@@ -26,4 +29,9 @@ message TeeArgs {
 
 message TeeResp {
     repeated bytes results = 1;
+}
+
+message DataKeyArgs {
+    bytes datakey = 1; // the encrypted AES key
+    bytes label = 2; // rsa label
 }

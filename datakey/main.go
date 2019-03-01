@@ -2,10 +2,10 @@
 // Click here and start typing.
 package main
 
-import "log"
+import "github.com/hyperledger/fabric/common/flogging"
+
+var logger = flogging.MustGetLogger("datakey")
 
 func main() {
-	if error := Demo(); error != nil {
-		log.Fatalf(error.Error())
-	}
+	exchangeDataKey()
 }
