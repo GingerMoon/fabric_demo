@@ -19,7 +19,7 @@ var (
 )
 
 type out struct {
-	respCh chan <- [][]byte
+	respCh chan <- *pb.PlainCiphertexts
 	errCh chan <- error
 }
 
@@ -46,7 +46,7 @@ func(w *worker) start() {
 				task.out.respCh <- nil
 				task.out.errCh <- err
 			} else {
-				task.out.respCh <- response.Results
+				task.out.respCh <- response
 				task.out.errCh <- nil
 			}
 		}()
@@ -86,9 +86,21 @@ func createTeeClient() pb.TeeClient {
 	return pb.NewTeeClient(conn)
 }
 
-func Execute(args [][]byte) (resp [][]byte, err error) {
-	respCh := make(chan [][]byte)
+func Execute(elf []byte, plaintexts [][]byte, feed4decrytions []*pb.Feed4Decryption) (*pb.PlainCiphertexts, error) {
+	respCh := make(chan *pb.PlainCiphertexts)
 	errCh := make(chan error)
-	taskPool <- &task{&pb.TeeArgs{Args:args}, &out{respCh, errCh}}
+	taskPool <- &task{
+		in:&pb.TeeArgs{
+			Elf:elf,
+			PlainCipherTexts:&pb.PlainCiphertexts{
+				Plaintexts:plaintexts,
+				Feed4Decryptions:feed4decrytions,
+			},
+		},
+		out: &out{
+			respCh,
+			errCh,
+		},
+	}
 	return <-respCh, <-errCh
 }

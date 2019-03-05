@@ -4,6 +4,10 @@ package main
 
 import (
 	"container/list"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -13,6 +17,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/pkg/errors"
+	"io"
 	mrand "math/rand"
 	"os"
 	"strconv"
@@ -30,12 +35,23 @@ const (
 	AESKEY         = "AESKEY"
 )
 
-var logger = flogging.MustGetLogger("payment-demo")
+var logger = flogging.MustGetLogger("payment-demo-tee")
+
+var key = []byte {
+0xee, 0xbc, 0x1f, 0x57, 0x48, 0x7f, 0x51, 0x92, 0x1c, 0x04, 0x65, 0x66,
+0x5f, 0x8a, 0xe6, 0xd1, 0x65, 0x8b, 0xb2, 0x6d, 0xe6, 0xf8, 0xa0, 0x69,
+0xa3, 0x52, 0x02, 0x93, 0xa5, 0x72, 0x07, 0x8f,
+}
+
+type state struct {
+	Amount []byte `json:amount`
+	Nonce   []byte `json:nonce`
+}
 
 type payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount int `json:amount`
+	State  state `json:state`
 }
 
 func (a *payload) ToBytes() ([]byte, error) {
@@ -84,6 +100,57 @@ func getEnvironment() (int, int, int) {
 	return clientamount, accounts, amount
 }
 
+func aesEncrypt(plaintext []byte) *state {
+		block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+	nonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
+	logger.Infof("plaintext is: %s, ciphertext is: %s", base64.StdEncoding.EncodeToString(plaintext), base64.StdEncoding.EncodeToString(ciphertext))
+	return &state{ciphertext, nonce}
+}
+
+func getCiphertextOfData() (balance, x *state) {
+	plaintextBalance := make([]byte, 4)
+	binary.BigEndian.PutUint32(plaintextBalance, 100)
+	balance = aesEncrypt(plaintextBalance)
+
+	plaintextX := make([]byte, 4)
+	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
+	x = aesEncrypt(plaintextX)
+	return
+}
+
+func decryptState(state *state) int {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	plaintext, err := aesgcm.Open(nil, state.Nonce, state.Amount, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return int(binary.BigEndian.Uint32(plaintext))
+}
+
 func Demo() error {
 
 	logger.Info("initializing sdk...")
@@ -104,16 +171,17 @@ func Demo() error {
 		clients[i] = client
 	}
 
-	clients[0].GetState(0)
-	clients[0].GetState(1)
-	clients[0].CreateAccount(0, 100)
-	clients[0].CreateAccount(1, 100)
-	txid, err := clients[0].Transfer(0, 1, amount)
+	balance, x := getCiphertextOfData()
+	clients[0].CreateAccount(0, balance)
+	clients[0].CreateAccount(1, balance)
+	txid, err := clients[0].Transfer(0, 1, x)
 	if err != nil {
 		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
 		logger.Errorf("transfer from 0 to 1 succeed. txid: %v", txid)
 	}
+	clients[0].GetState(0)
+	clients[0].GetState(1)
 
 	//CreateAccounts(clients)
 	//
@@ -128,6 +196,8 @@ func Demo() error {
 }
 
 func CreateAccounts(clients []*PaymentClient) {
+	balance, _ := getCiphertextOfData()
+
 	var fense sync.WaitGroup
 	start := time.Now()
 
@@ -137,7 +207,7 @@ func CreateAccounts(clients []*PaymentClient) {
 		go func(cc int) {
 			defer fense.Done()
 			for i := cc; i < accounts; i += len(clients) {
-				clients[i%clientamount].CreateAccount(i, 100)
+				clients[i%clientamount].CreateAccount(i, balance)
 			}
 		}(c)
 	}
@@ -185,6 +255,8 @@ func GetNetworkTotalAmount(clients []*PaymentClient) int {
 }
 
 func Transfer(clients []*PaymentClient) {
+	_, x := getCiphertextOfData()
+
 	var fense sync.WaitGroup
 	start := time.Now()
 
@@ -221,7 +293,7 @@ func Transfer(clients []*PaymentClient) {
 			for i := cc; i < accounts; i += len(clients) {
 				from := r1.Intn(clientamount)
 				to := r1.Intn(clientamount)
-				_, err := clients[i%clientamount].Transfer(from, to, amount)
+				_, err := clients[i%clientamount].Transfer(from, to, x)
 				if err != nil {
 					txErrCh <- err.Error()
 				}
@@ -251,6 +323,7 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 }
 
 func (c *PaymentClient) transfer() {
+	_, x := getCiphertextOfData()
 
 	// print failed tx message at last in a batch
 	txErrCh := make(chan string, 100)
@@ -283,7 +356,7 @@ func (c *PaymentClient) transfer() {
 
 			from := r1.Intn(clientamount)
 			to := r1.Intn(clientamount)
-			_, err := c.Transfer(from, to, amount)
+			_, err := c.Transfer(from, to, x)
 			if err != nil {
 				txErrCh <- err.Error()
 			}
@@ -301,8 +374,8 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 	return totalAmount
 }
 
-func (c *PaymentClient) CreateAccount(index, amount int) error {
-	tmp := payload{From: "", To: strconv.Itoa(index), Amount: amount}
+func (c *PaymentClient) CreateAccount(index int, amount *state) error {
+	tmp := payload{From: "", To: strconv.Itoa(index), State: *amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return errors.WithMessage(err, "CreateAccount failed (marshall payload).")
@@ -331,13 +404,16 @@ func (c *PaymentClient) GetState(index int) int {
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
 	}
-	balance := binary.LittleEndian.Uint32(response.Payload)
-	logger.Infof("%v : %v", index, balance)
-	return int(balance)
+	state := state{}
+	json.Unmarshal(response.Payload, &state)
+
+	balance := decryptState(&state)
+	logger.Infof("%v : %d", index, balance)
+	return balance
 }
 
-func (c *PaymentClient)  Transfer(from, to, amount int) (string, error) {
-	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), Amount: amount}
+func (c *PaymentClient)  Transfer(from, to int, amount *state) (string, error) {
+	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return "", errors.WithMessage(err, "Transfer failed (marshall payload).")

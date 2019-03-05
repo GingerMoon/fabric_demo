@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	pbtee "github.com/hyperledger/fabric/protos/tee"
 	"github.com/pkg/errors"
 	"os"
 )
@@ -16,10 +16,15 @@ var (
 	logger = flogging.MustGetLogger("payment_cc")
 )
 
+type state struct {
+	Amount []byte `json:amount`
+	Nonce   []byte `json:nonce`
+}
+
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount uint32 `json:amount`
+	State  state `json:state`
 }
 
 func (a *Payload) ToBytes() ([]byte, error) {
@@ -71,9 +76,8 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
-	bs := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bs, payload.Amount)
-	err := stub.PutState(payload.To, bs)
+	state, _ := json.Marshal(payload.State)
+	err := stub.PutState(payload.To, state)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
 	}
@@ -88,12 +92,12 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 
 	key := args[0]
-	balance, err := stub.GetState(key)
+	stateBytes, err := stub.GetState(key)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("GetState %s failed. Err: %s", key, err.Error()))
 	}
 
-	return shim.Success(balance)
+	return shim.Success(stateBytes)
 }
 
 // Transfer from A to B.
@@ -112,35 +116,53 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 		return shim.Success(nil)
 	}
 
-	// get balance of A and B
-	balanceA, err := stub.GetState(payload.From)
+	// get state of A and B
+	stateAbytes, err := stub.GetState(payload.From)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.From)).Error())
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get state for account %s failed.", payload.From)).Error())
+	}
+	stateA := state{}
+	err = json.Unmarshal(stateAbytes, &stateA)
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
 	}
 
-	balanceB, err := stub.GetState(payload.To)
+	stateBbytes, err := stub.GetState(payload.To)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.To)).Error())
 	}
+	stateB := state{}
+	err = json.Unmarshal(stateBbytes, &stateB)
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
+	}
 
-	bsAmout := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bsAmout, payload.Amount)
+	// Tee execution
+	var feed4decrytions []*pbtee.Feed4Decryption
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Amount, Nonce:stateA.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Amount, Nonce:stateB.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Amount, Nonce:payload.State.Nonce})
 
-	var teeArgs [][]byte
-	teeArgs = append(teeArgs, []byte("paymentCCtee"))
-	teeArgs = append(teeArgs, balanceA)
-	teeArgs = append(teeArgs, balanceB)
-	teeArgs = append(teeArgs, bsAmout)
-
-	results, err := stub.TeeExecute(teeArgs)
+	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
 	}
-	if len(results) != 2 {
-		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results)))
+	if len(results.Feed4Decryptions) != 2 {
+		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results.Feed4Decryptions)))
 	}
-	stub.PutState(payload.From, results[0])
-	stub.PutState(payload.To, results[1])
+
+	// update state db
+	stateAbytes, err = json.Marshal(results.Feed4Decryptions[0])
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[0] failed")).Error())
+	}
+	stub.PutState(payload.From, stateAbytes)
+
+	stateBbytes, err = json.Marshal(results.Feed4Decryptions[1])
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[1] failed")).Error())
+	}
+	stub.PutState(payload.To, stateBbytes)
 
 	return shim.Success(nil)
 }

@@ -24,10 +24,11 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type TeeArgs struct {
-	Args                 [][]byte `protobuf:"bytes,1,rep,name=args,proto3" json:"args,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Elf                  []byte            `protobuf:"bytes,1,opt,name=elf,proto3" json:"elf,omitempty"`
+	PlainCipherTexts     *PlainCiphertexts `protobuf:"bytes,2,opt,name=plainCipherTexts,proto3" json:"plainCipherTexts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *TeeArgs) Reset()         { *m = TeeArgs{} }
@@ -55,48 +56,110 @@ func (m *TeeArgs) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TeeArgs proto.InternalMessageInfo
 
-func (m *TeeArgs) GetArgs() [][]byte {
+func (m *TeeArgs) GetElf() []byte {
 	if m != nil {
-		return m.Args
+		return m.Elf
 	}
 	return nil
 }
 
-type TeeResp struct {
-	Results              [][]byte `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+func (m *TeeArgs) GetPlainCipherTexts() *PlainCiphertexts {
+	if m != nil {
+		return m.PlainCipherTexts
+	}
+	return nil
+}
+
+type PlainCiphertexts struct {
+	Plaintexts           [][]byte           `protobuf:"bytes,1,rep,name=plaintexts,proto3" json:"plaintexts,omitempty"`
+	Feed4Decryptions     []*Feed4Decryption `protobuf:"bytes,2,rep,name=feed4Decryptions,proto3" json:"feed4Decryptions,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *PlainCiphertexts) Reset()         { *m = PlainCiphertexts{} }
+func (m *PlainCiphertexts) String() string { return proto.CompactTextString(m) }
+func (*PlainCiphertexts) ProtoMessage()    {}
+func (*PlainCiphertexts) Descriptor() ([]byte, []int) {
+	return fileDescriptor_148e4d29062bab63, []int{1}
+}
+
+func (m *PlainCiphertexts) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PlainCiphertexts.Unmarshal(m, b)
+}
+func (m *PlainCiphertexts) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PlainCiphertexts.Marshal(b, m, deterministic)
+}
+func (m *PlainCiphertexts) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PlainCiphertexts.Merge(m, src)
+}
+func (m *PlainCiphertexts) XXX_Size() int {
+	return xxx_messageInfo_PlainCiphertexts.Size(m)
+}
+func (m *PlainCiphertexts) XXX_DiscardUnknown() {
+	xxx_messageInfo_PlainCiphertexts.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PlainCiphertexts proto.InternalMessageInfo
+
+func (m *PlainCiphertexts) GetPlaintexts() [][]byte {
+	if m != nil {
+		return m.Plaintexts
+	}
+	return nil
+}
+
+func (m *PlainCiphertexts) GetFeed4Decryptions() []*Feed4Decryption {
+	if m != nil {
+		return m.Feed4Decryptions
+	}
+	return nil
+}
+
+type Feed4Decryption struct {
+	Ciphertext           []byte   `protobuf:"bytes,1,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	Nonce                []byte   `protobuf:"bytes,2,opt,name=nonce,proto3" json:"nonce,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *TeeResp) Reset()         { *m = TeeResp{} }
-func (m *TeeResp) String() string { return proto.CompactTextString(m) }
-func (*TeeResp) ProtoMessage()    {}
-func (*TeeResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_148e4d29062bab63, []int{1}
+func (m *Feed4Decryption) Reset()         { *m = Feed4Decryption{} }
+func (m *Feed4Decryption) String() string { return proto.CompactTextString(m) }
+func (*Feed4Decryption) ProtoMessage()    {}
+func (*Feed4Decryption) Descriptor() ([]byte, []int) {
+	return fileDescriptor_148e4d29062bab63, []int{2}
 }
 
-func (m *TeeResp) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TeeResp.Unmarshal(m, b)
+func (m *Feed4Decryption) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Feed4Decryption.Unmarshal(m, b)
 }
-func (m *TeeResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TeeResp.Marshal(b, m, deterministic)
+func (m *Feed4Decryption) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Feed4Decryption.Marshal(b, m, deterministic)
 }
-func (m *TeeResp) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TeeResp.Merge(m, src)
+func (m *Feed4Decryption) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Feed4Decryption.Merge(m, src)
 }
-func (m *TeeResp) XXX_Size() int {
-	return xxx_messageInfo_TeeResp.Size(m)
+func (m *Feed4Decryption) XXX_Size() int {
+	return xxx_messageInfo_Feed4Decryption.Size(m)
 }
-func (m *TeeResp) XXX_DiscardUnknown() {
-	xxx_messageInfo_TeeResp.DiscardUnknown(m)
+func (m *Feed4Decryption) XXX_DiscardUnknown() {
+	xxx_messageInfo_Feed4Decryption.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_TeeResp proto.InternalMessageInfo
+var xxx_messageInfo_Feed4Decryption proto.InternalMessageInfo
 
-func (m *TeeResp) GetResults() [][]byte {
+func (m *Feed4Decryption) GetCiphertext() []byte {
 	if m != nil {
-		return m.Results
+		return m.Ciphertext
+	}
+	return nil
+}
+
+func (m *Feed4Decryption) GetNonce() []byte {
+	if m != nil {
+		return m.Nonce
 	}
 	return nil
 }
@@ -113,7 +176,7 @@ func (m *DataKeyArgs) Reset()         { *m = DataKeyArgs{} }
 func (m *DataKeyArgs) String() string { return proto.CompactTextString(m) }
 func (*DataKeyArgs) ProtoMessage()    {}
 func (*DataKeyArgs) Descriptor() ([]byte, []int) {
-	return fileDescriptor_148e4d29062bab63, []int{2}
+	return fileDescriptor_148e4d29062bab63, []int{3}
 }
 
 func (m *DataKeyArgs) XXX_Unmarshal(b []byte) error {
@@ -150,29 +213,35 @@ func (m *DataKeyArgs) GetLabel() []byte {
 
 func init() {
 	proto.RegisterType((*TeeArgs)(nil), "protos.TeeArgs")
-	proto.RegisterType((*TeeResp)(nil), "protos.TeeResp")
+	proto.RegisterType((*PlainCiphertexts)(nil), "protos.PlainCiphertexts")
+	proto.RegisterType((*Feed4Decryption)(nil), "protos.Feed4Decryption")
 	proto.RegisterType((*DataKeyArgs)(nil), "protos.DataKeyArgs")
 }
 
 func init() { proto.RegisterFile("tee/tee.proto", fileDescriptor_148e4d29062bab63) }
 
 var fileDescriptor_148e4d29062bab63 = []byte{
-	// 226 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0x90, 0x41, 0x4b, 0xc4, 0x30,
-	0x10, 0x85, 0xb7, 0xae, 0x5a, 0x18, 0x95, 0x85, 0x51, 0x24, 0x54, 0x84, 0x25, 0x5e, 0xbc, 0x98,
-	0x82, 0x9e, 0x05, 0x05, 0x7b, 0xf2, 0xb6, 0xec, 0x1f, 0x48, 0xd7, 0x67, 0x04, 0xab, 0x2d, 0xcd,
-	0x54, 0xb6, 0xff, 0x5e, 0x9a, 0x34, 0xb0, 0xa7, 0xe4, 0x4d, 0x3e, 0x92, 0xef, 0x85, 0x2e, 0x04,
-	0x28, 0x05, 0x30, 0x5d, 0xdf, 0x4a, 0xcb, 0xa7, 0x61, 0xf1, 0xc5, 0x8d, 0x6b, 0x5b, 0xd7, 0xa0,
-	0x0c, 0xb1, 0x1e, 0x3e, 0x4b, 0xfc, 0x74, 0x32, 0x46, 0x48, 0xdf, 0x52, 0xbe, 0x05, 0x5e, 0x7b,
-	0xe7, 0x99, 0xe9, 0xd8, 0xf6, 0xce, 0xab, 0x6c, 0xbd, 0xbc, 0x3f, 0xdf, 0x84, 0xbd, 0xbe, 0x0b,
-	0xc7, 0x1b, 0xf8, 0x8e, 0x15, 0xe5, 0x3d, 0xfc, 0xd0, 0x48, 0x22, 0x52, 0xd4, 0xcf, 0x74, 0xf6,
-	0x66, 0xc5, 0xbe, 0x63, 0x0c, 0xf7, 0x28, 0xca, 0x3f, 0xac, 0xd8, 0x6f, 0x8c, 0x2a, 0x5b, 0x67,
-	0x13, 0x38, 0x47, 0xbe, 0xa2, 0x93, 0xc6, 0xd6, 0x68, 0xd4, 0x51, 0x98, 0xc7, 0xf0, 0xf8, 0x47,
-	0xcb, 0x2d, 0xc0, 0x0f, 0x94, 0x57, 0x7b, 0xec, 0x06, 0x01, 0xaf, 0xa2, 0x9c, 0x37, 0xb3, 0x5a,
-	0x71, 0x38, 0x98, 0x64, 0xf4, 0x82, 0x5f, 0x68, 0x55, 0xed, 0x77, 0x5f, 0xf6, 0xd7, 0x61, 0x7e,
-	0x9c, 0x2f, 0x13, 0x75, 0x60, 0x53, 0x5c, 0x9b, 0x58, 0xdf, 0xa4, 0xfa, 0xa6, 0x9a, 0xea, 0xeb,
-	0x45, 0x1d, 0xff, 0xe7, 0xe9, 0x3f, 0x00, 0x00, 0xff, 0xff, 0xe5, 0x72, 0x7d, 0x32, 0x37, 0x01,
-	0x00, 0x00,
+	// 315 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x52, 0x5f, 0x4f, 0xbb, 0x30,
+	0x14, 0x1d, 0x3f, 0xf2, 0x73, 0xc9, 0xdd, 0xcc, 0x48, 0x35, 0x4a, 0x66, 0x62, 0x96, 0x3e, 0xf1,
+	0xc4, 0x12, 0x34, 0xbe, 0x99, 0x68, 0x06, 0xfa, 0xe0, 0x8b, 0x21, 0x7c, 0x81, 0xc2, 0x2e, 0x8c,
+	0x88, 0x94, 0x40, 0x17, 0xe1, 0xc9, 0xaf, 0x6e, 0x5a, 0xa8, 0xe2, 0x16, 0x9f, 0xda, 0x73, 0xef,
+	0x39, 0xbd, 0x7f, 0x4e, 0xe1, 0x54, 0x20, 0xae, 0x05, 0xa2, 0x5b, 0xd5, 0x5c, 0x70, 0x72, 0xa2,
+	0x8e, 0x66, 0x79, 0x95, 0x71, 0x9e, 0x15, 0xb8, 0x56, 0x30, 0xde, 0xa7, 0x6b, 0x7c, 0xaf, 0x44,
+	0xd7, 0x93, 0x28, 0x83, 0x69, 0x84, 0xf8, 0x58, 0x67, 0x0d, 0xb1, 0xc0, 0xc4, 0x22, 0xb5, 0x8d,
+	0x95, 0xe1, 0xcc, 0x43, 0x79, 0x25, 0x3e, 0x58, 0x55, 0xc1, 0xf2, 0x72, 0x93, 0x57, 0x3b, 0xac,
+	0x23, 0x6c, 0x45, 0x63, 0xff, 0x5b, 0x19, 0xce, 0xcc, 0xb3, 0x7b, 0x79, 0xe3, 0xbe, 0xfe, 0xe4,
+	0x85, 0xcc, 0x87, 0x47, 0x0a, 0xfa, 0x01, 0xd6, 0x21, 0x8b, 0x5c, 0x03, 0x28, 0x9e, 0x42, 0xb6,
+	0xb1, 0x32, 0x9d, 0x79, 0x38, 0x8a, 0x90, 0x0d, 0x58, 0x29, 0xe2, 0xf6, 0xd6, 0xc7, 0xa4, 0xee,
+	0x2a, 0x91, 0xf3, 0x52, 0x56, 0x36, 0x9d, 0x99, 0x77, 0xa9, 0x2b, 0x3f, 0xfd, 0xce, 0x87, 0x47,
+	0x02, 0xfa, 0x0c, 0x8b, 0x03, 0x92, 0xac, 0x9b, 0x7c, 0xb7, 0x31, 0x8c, 0x3a, 0x8a, 0x90, 0x73,
+	0xf8, 0x5f, 0xf2, 0x32, 0x41, 0x35, 0xe6, 0x3c, 0xec, 0x01, 0xbd, 0x87, 0x99, 0xcf, 0x04, 0x7b,
+	0xc1, 0x4e, 0x2d, 0xca, 0x86, 0xe9, 0x96, 0x09, 0xf6, 0x86, 0xdd, 0xf0, 0x82, 0x86, 0x52, 0x5e,
+	0xb0, 0x18, 0x0b, 0x2d, 0x57, 0xc0, 0xfb, 0x04, 0x33, 0x42, 0x24, 0x77, 0x30, 0x0d, 0x5a, 0x4c,
+	0xf6, 0x02, 0xc9, 0x42, 0x0f, 0x31, 0xec, 0x7e, 0xf9, 0xe7, 0x3e, 0xe9, 0x84, 0x3c, 0xc0, 0x22,
+	0x68, 0x93, 0x1d, 0x2b, 0x33, 0x1c, 0xba, 0x20, 0x67, 0x9a, 0x3e, 0x6a, 0x6b, 0x79, 0xe1, 0xf6,
+	0x46, 0xbb, 0xda, 0x68, 0x37, 0x90, 0x46, 0xd3, 0x49, 0xdc, 0xff, 0x84, 0x9b, 0xaf, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0x67, 0x19, 0x78, 0x96, 0x21, 0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -187,7 +256,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type TeeClient interface {
-	Execute(ctx context.Context, in *TeeArgs, opts ...grpc.CallOption) (*TeeResp, error)
+	Execute(ctx context.Context, in *TeeArgs, opts ...grpc.CallOption) (*PlainCiphertexts, error)
 	ExchangeDataKey(ctx context.Context, in *DataKeyArgs, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
@@ -199,8 +268,8 @@ func NewTeeClient(cc *grpc.ClientConn) TeeClient {
 	return &teeClient{cc}
 }
 
-func (c *teeClient) Execute(ctx context.Context, in *TeeArgs, opts ...grpc.CallOption) (*TeeResp, error) {
-	out := new(TeeResp)
+func (c *teeClient) Execute(ctx context.Context, in *TeeArgs, opts ...grpc.CallOption) (*PlainCiphertexts, error) {
+	out := new(PlainCiphertexts)
 	err := c.cc.Invoke(ctx, "/protos.Tee/Execute", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -219,7 +288,7 @@ func (c *teeClient) ExchangeDataKey(ctx context.Context, in *DataKeyArgs, opts .
 
 // TeeServer is the server API for Tee service.
 type TeeServer interface {
-	Execute(context.Context, *TeeArgs) (*TeeResp, error)
+	Execute(context.Context, *TeeArgs) (*PlainCiphertexts, error)
 	ExchangeDataKey(context.Context, *DataKeyArgs) (*empty.Empty, error)
 }
 

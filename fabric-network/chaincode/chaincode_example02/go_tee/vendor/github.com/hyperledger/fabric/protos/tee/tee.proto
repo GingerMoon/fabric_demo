@@ -19,16 +19,23 @@ import "google/protobuf/empty.proto";
 
 // Interface exported by the server.
 service Tee {
-    rpc Execute(TeeArgs) returns (TeeResp) {}
+    rpc Execute(TeeArgs) returns (PlainCiphertexts) {}
     rpc ExchangeDataKey(DataKeyArgs) returns (google.protobuf.Empty) {}
 }
 
 message TeeArgs {
-    repeated bytes args = 1;
+    bytes elf = 1;
+    PlainCiphertexts plainCipherTexts = 2;
 }
 
-message TeeResp {
-    repeated bytes results = 1;
+message PlainCiphertexts {
+    repeated  bytes plaintexts = 1;
+    repeated  Feed4Decryption feed4Decryptions = 2;
+}
+
+message Feed4Decryption {
+    bytes ciphertext = 1;
+    bytes nonce = 2;
 }
 
 message DataKeyArgs {
