@@ -6,6 +6,7 @@ import (
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	pbtee "github.com/hyperledger/fabric/protos/tee"
 	"github.com/pkg/errors"
 	"os"
 )
@@ -19,10 +20,15 @@ var (
 	logger = flogging.MustGetLogger("payment_cc")
 )
 
+type state struct {
+	Amount []byte `json:amount`
+	Nonce   []byte `json:nonce`
+}
+
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	Amount int `json:amount`
+	State  state `json:state`
 }
 
 func (a *Payload) ToBytes() ([]byte, error) {
@@ -32,19 +38,6 @@ func (a *Payload) ToBytes() ([]byte, error) {
 func (a *Payload) FromBytes(d []byte) error {
 	return json.Unmarshal(d, a)
 }
-
-type accountInfo struct {
-	Balance int  `json: "balance"`
-}
-
-func (a *accountInfo) ToBytes() ([]byte, error) {
-	return json.Marshal(a)
-}
-
-func (a *accountInfo) FromBytes(d []byte) error {
-	return json.Unmarshal(d, a)
-}
-
 
 // Paymentcc example simple Chaincode implementation
 type Paymentcc struct {
@@ -75,7 +68,6 @@ func (t *Paymentcc) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(fmt.Sprintf("Unsupported function %s", f))
 	}
 }
-
 // arg0 is the payload, payload.To is the state db key, which is also the public key.
 func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
@@ -87,7 +79,8 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
-	err := t.putBalance(stub, payload.To, payload.Amount)
+	state, _ := json.Marshal(payload.State)
+	err := stub.PutPrivateData(COLLECTION, payload.To, state)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
 	}
@@ -102,57 +95,18 @@ func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 
 	key := args[0]
-	account, err := t.getAccountInfo(stub, key)
-	cleartextValue, err := account.ToBytes()
+	stateBytes, err := stub.GetPrivateData(COLLECTION, key)
 	if err != nil {
-		return shim.Error(fmt.Sprintf("getStateDecryptAndVerify failed, err %+v", err))
+		return shim.Error(fmt.Sprintf("GetState %s failed. Err: %s", key, err.Error()))
 	}
 
-	return shim.Success(cleartextValue)
-}
-
-func (t *Paymentcc) getAccountInfo (stub shim.ChaincodeStubInterface, key string) (*accountInfo, error) {
-	accountInfobytes, err := stub.GetPrivateData(COLLECTION, key)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	var account accountInfo
-	account.FromBytes(accountInfobytes)
-
-	return &account, nil
-}
-
-func (t *Paymentcc) getBalance (stub shim.ChaincodeStubInterface, key string) (int, error) {
-	account, err := t.getAccountInfo(stub, key)
-	if err != nil {
-		return -1, errors.WithStack(errors.WithMessage(err, fmt.Sprintf("get account for %s failed.", key)))
-	}
-
-	return account.Balance, err
-}
-
-func (t *Paymentcc) putBalance (stub shim.ChaincodeStubInterface, key string, balance int) error {
-	logger.Infof("put %s : %s", key, balance)
-
-	// sign, then encrypt, then put state
-	a := accountInfo{Balance: balance}
-	payload, err := a.ToBytes()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	err = stub.PutPrivateData(COLLECTION, key, payload)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+	return shim.Success(stateBytes)
 }
 
 // Transfer from A to B.
 // arg0 is payload
 func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
@@ -165,35 +119,54 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 		return shim.Success(nil)
 	}
 
-	// get balance of A and B
-	balanceA, err := t.getBalance(stub, payload.From)
+	// get state of A and B
+	stateAbytes, err := stub.GetPrivateData(COLLECTION, payload.From)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.From)).Error())
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get state for account %s failed.", payload.From)).Error())
 	}
-	logger.Infof("before transfer, %s's balance is %d", payload.From, balanceA)
+	stateA := state{}
+	err = json.Unmarshal(stateAbytes, &stateA)
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
+	}
 
-	balanceB, err := t.getBalance(stub, payload.To)
+	stateBbytes, err := stub.GetPrivateData(COLLECTION, payload.To)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.To)).Error())
 	}
-	logger.Infof("before transfer, %s's balance is %d", payload.To, balanceB)
-
-	balanceA = balanceA - payload.Amount
-	if balanceA < 0 {
-		return shim.Error(fmt.Sprintf("account %s has not enough balance (%d) to Transfer %d.", args[0], balanceA + payload.Amount, payload.Amount))
-	}
-	err = t.putBalance(stub, payload.From, balanceA)
+	stateB := state{}
+	err = json.Unmarshal(stateBbytes, &stateB)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[0])).Error())
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
 	}
 
-	balanceB = balanceB + payload.Amount
-	t.putBalance(stub, payload.To, balanceB)
+	// Tee execution
+	var feed4decrytions []*pbtee.Feed4Decryption
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Amount, Nonce:stateA.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Amount, Nonce:stateB.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Amount, Nonce:payload.State.Nonce})
+
+	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("put balance for account %s failed.", args[1])).Error())
+		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
+	}
+	if len(results.Feed4Decryptions) != 2 {
+		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results.Feed4Decryptions)))
 	}
 
-	fmt.Printf("balanceA = %d, balanceB = %d\n", balanceA, balanceB)
+	// update state db
+	stateAbytes, err = json.Marshal(results.Feed4Decryptions[0])
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[0] failed")).Error())
+	}
+	stub.PutState(payload.From, stateAbytes)
+
+	stateBbytes, err = json.Marshal(results.Feed4Decryptions[1])
+	if err != nil {
+		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[1] failed")).Error())
+	}
+	stub.PutState(payload.To, stateBbytes)
+
 	return shim.Success(nil)
 }
 
