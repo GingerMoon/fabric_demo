@@ -80,6 +80,19 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
+	// input parameters check
+	if payload.From != "" {
+		return shim.Error(fmt.Sprintf("Create account(%s) failed! The [from(%s)] account must be empty.", payload.To, payload.From))
+	}
+	if payload.To != "0" && payload.To != "1" {
+		return shim.Error(fmt.Sprintf("Create account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.To))
+	}
+	stateBytes, _ := stub.GetPrivateData(COLLECTION, payload.To)
+	if stateBytes != nil {
+		return shim.Error(fmt.Sprintf("Create account(%s) failed! The account has already exists!", payload.To))
+	}
+
+	// PutPrivateData
 	state, _ := json.Marshal(payload.State)
 	err := stub.PutPrivateData(COLLECTION, payload.To, state)
 	if err != nil {
@@ -116,11 +129,25 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	var payload Payload
 	payload.FromBytes([]byte(payload_str))
 
+	// input parameters check
+	if payload.From != "0" && payload.From != "1" {
+		return shim.Error(fmt.Sprintf("Transfer from account(%s) to account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.From, payload.To))
+	}
+	if payload.To != "0" && payload.To != "1" {
+		return shim.Error(fmt.Sprintf("Transfer from account(%s) to account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.From, payload.To))
+	}
+	// creator check hasn't be finished because every time the fabric is restarted, the public key/certification is changed.
+	//if payload.From == "0" {
+	//	stub.GetCreator() must be 0
+	//} else if payload.From == "1" {
+	//	stub.GetCreator() must be 1
+	//}
+
 	if payload.From == payload.To {
 		return shim.Success(nil)
 	}
 
-	// get state of A and B
+	// get private data
 	stateAbytes, err := stub.GetPrivateData(COLLECTION, payload.From)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get state for account %s failed.", payload.From)).Error())
@@ -156,17 +183,17 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	}
 
 	// update state db
-	stateAbytes, err = json.Marshal(results.Feed4Decryptions[0])
+	stateAbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[0].Ciphertext, Nonce:results.Feed4Decryptions[0].Nonce})
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[0] failed")).Error())
 	}
-	stub.PutState(payload.From, stateAbytes)
+	stub.PutPrivateData(COLLECTION, payload.From, stateAbytes)
 
-	stateBbytes, err = json.Marshal(results.Feed4Decryptions[1])
+	stateBbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[1].Ciphertext, Nonce:results.Feed4Decryptions[1].Nonce})
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[1] failed")).Error())
 	}
-	stub.PutState(payload.To, stateBbytes)
+	stub.PutPrivateData(COLLECTION, payload.To, stateBbytes)
 
 	return shim.Success(nil)
 }

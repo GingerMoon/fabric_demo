@@ -184,6 +184,15 @@ func Demo() error {
 	clients[0].GetState(0)
 	clients[0].GetState(1)
 
+	txid, err = clients[0].Transfer(0, 1, x)
+	if err != nil {
+		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
+	} else {
+		logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
+	}
+	clients[0].GetState(0)
+	clients[0].GetState(1)
+
 	//CreateAccounts(clients)
 	//
 	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
