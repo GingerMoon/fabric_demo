@@ -78,7 +78,7 @@ func (stub *MockStub) GetChannelID() string {
 	return stub.ChannelID
 }
 
-func (stub *MockStub) TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption) (*pbtee.PlainCiphertexts, error) {
+func (stub *MockStub) TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption, nonces [][]byte) (*pbtee.PlainCiphertexts, error) {
 	return nil, nil
 }
 

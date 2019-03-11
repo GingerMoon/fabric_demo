@@ -86,7 +86,7 @@ func createTeeClient() pb.TeeClient {
 	return pb.NewTeeClient(conn)
 }
 
-func Execute(elf []byte, plaintexts [][]byte, feed4decrytions []*pb.Feed4Decryption) (*pb.PlainCiphertexts, error) {
+func Execute(elf []byte, plaintexts [][]byte, feed4decrytions []*pb.Feed4Decryption, nonces [][]byte) (*pb.PlainCiphertexts, error) {
 	respCh := make(chan *pb.PlainCiphertexts)
 	errCh := make(chan error)
 	taskPool <- &task{
@@ -96,6 +96,7 @@ func Execute(elf []byte, plaintexts [][]byte, feed4decrytions []*pb.Feed4Decrypt
 				Plaintexts:plaintexts,
 				Feed4Decryptions:feed4decrytions,
 			},
+			Nonces:nonces,
 		},
 		out: &out{
 			respCh,

@@ -30,7 +30,9 @@ type Chaincode interface {
 // ChaincodeStubInterface is used by deployable chaincode apps to access and
 // modify their ledgers
 type ChaincodeStubInterface interface {
-	TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption) (*pbtee.PlainCiphertexts, error)
+	// nonces [][]byte:
+	// due to the blockchain rules, HW must use the same nonce for encrypting the confidential results (which is returned in Feed4Decryption).
+	TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption, nonces [][]byte) (*pbtee.PlainCiphertexts, error)
 
 	// GetArgs returns the arguments intended for the chaincode Init and Invoke
 	// as an array of byte arrays.

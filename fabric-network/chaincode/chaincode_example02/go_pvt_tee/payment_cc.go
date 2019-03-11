@@ -22,13 +22,14 @@ var (
 
 type state struct {
 	Amount []byte `json:amount`
-	Nonce   []byte `json:nonce`
+	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
 	State  state `json:state`
+	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
 }
 
 func (a *Payload) ToBytes() ([]byte, error) {
@@ -146,7 +147,7 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Amount, Nonce:stateB.Nonce})
 	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Amount, Nonce:payload.State.Nonce})
 
-	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions)
+	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions, payload.Nonces)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
 	}

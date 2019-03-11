@@ -45,13 +45,14 @@ var key = []byte {
 
 type state struct {
 	Amount []byte `json:amount`
-	Nonce   []byte `json:nonce`
+	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
 type payload struct {
 	From   string `json:from`
 	To     string `json:to`
 	State  state `json:state`
+	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
 }
 
 func (a *payload) ToBytes() ([]byte, error) {
@@ -178,7 +179,7 @@ func Demo() error {
 	if err != nil {
 		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
-		logger.Errorf("transfer from 0 to 1 succeed. txid: %v", txid)
+		logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
 	}
 	clients[0].GetState(0)
 	clients[0].GetState(1)
@@ -413,7 +414,17 @@ func (c *PaymentClient) GetState(index int) int {
 }
 
 func (c *PaymentClient)  Transfer(from, to int, amount *state) (string, error) {
-	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount}
+	// generate nonces for encrypting updated state.
+	nonces := make([][]byte, 2)
+	for i:=0; i < 2; i++ {
+		nonce := make([]byte, 12)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			panic(err.Error())
+		}
+		nonces[i] = nonce
+	}
+
+	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount, Nonces:nonces}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return "", errors.WithMessage(err, "Transfer failed (marshall payload).")

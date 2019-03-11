@@ -944,8 +944,8 @@ func (iter *CommonIterator) Close() error {
 	return err
 }
 
-func (stub *ChaincodeStub) TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption) (*pbtee.PlainCiphertexts, error) {
-	return tee.Execute(elf, plaintexts, feed4decrytions)
+func (stub *ChaincodeStub) TeeExecute(elf []byte, plaintexts [][]byte, feed4decrytions []*pbtee.Feed4Decryption, nonces [][]byte) (*pbtee.PlainCiphertexts, error) {
+	return tee.Execute(elf, plaintexts, feed4decrytions, nonces)
 }
 
 // GetArgs documentation can be found in interfaces.go
