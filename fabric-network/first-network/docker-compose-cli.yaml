@@ -18,12 +18,31 @@ networks:
   byfn:
 
 services:
+  zookeeper.example.com:
+    extends:
+      file:   base/docker-compose-base.yaml
+      service: zookeeper.example.com
+    container_name: zookeeper.example.com
+    networks:
+      - byfn
+
+  kafka.example.com:
+    extends:
+      file:   base/docker-compose-base.yaml
+      service: kafka.example.com
+    container_name: kafka.example.com
+    depends_on:
+      - zookeeper.example.com
+    networks:
+      - byfn
 
   orderer.example.com:
     extends:
       file:   base/docker-compose-base.yaml
       service: orderer.example.com
     container_name: orderer.example.com
+    depends_on:
+      - kafka.example.com
     networks:
       - byfn
 
@@ -110,5 +129,7 @@ services:
       - peer1.org1.example.com
       - peer0.org2.example.com
       - peer1.org2.example.com
+      - peer0.org3.example.com
+      - peer1.org3.example.com
     networks:
       - byfn
