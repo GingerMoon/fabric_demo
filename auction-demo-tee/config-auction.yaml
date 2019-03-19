@@ -12,6 +12,28 @@ client:
       # Specific to the underlying KeyValueStore that backs the crypto key store.
       path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp
 
+#  organization: org2
+#  logging:
+#    level: info
+#  cryptoconfig:
+#    path: ../crypto
+#  credentialStore:
+#    path: "/tmp/state-store"
+#    cryptoStore:
+#      # Specific to the underlying KeyValueStore that backs the crypto key store.
+#      path: ../crypto/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp
+
+#  organization: org3
+#  logging:
+#    level: info
+#  cryptoconfig:
+#    path: ../crypto
+#  credentialStore:
+#    path: "/tmp/state-store"
+#    cryptoStore:
+#      # Specific to the underlying KeyValueStore that backs the crypto key store.
+#      path: ../crypto/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp
+
    # BCCSP config for the client. Used by GO SDK.
   BCCSP:
     security:
@@ -66,23 +88,35 @@ channels:
         ledgerQuery: true
         eventSource: true
 
-#      peer1.org1.example.com:
-#        endorsingPeer: true
-#        chaincodeQuery: true
-#        ledgerQuery: true
-#        eventSource: true
-#
-#      peer0.org2.example.com:
-#        endorsingPeer: true
-#        chaincodeQuery: true
-#        ledgerQuery: true
-#        eventSource: true
-#
-#      peer1.org2.example.com:
-#        endorsingPeer: true
-#        chaincodeQuery: true
-#        ledgerQuery: true
-#        eventSource: true
+      peer1.org1.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer0.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer1.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer0.org3.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer1.org3.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
 
 organizations:
   org1:
@@ -95,7 +129,6 @@ organizations:
       User1:
         cert:
           path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-
     peers:
       - peer0.org1.example.com
       - peer1.org1.example.com
@@ -109,16 +142,28 @@ organizations:
       User1:
         cert:
           path: ../crypto/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-
     peers:
       - peer0.org2.example.com
       - peer1.org2.example.com
-
+  org3:
+    mspid: Org3MSP
+    cryptoPath:  peerOrganizations/org3.example.com/users/{username}@org3.example.com/msp
+    users:
+      Admin:
+        cert:
+          path: ../crypto/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/signcerts/Admin@org3.example.com-cert.pem
+      User1:
+        cert:
+          path: ../crypto/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
+    peers:
+    - peer0.org3.example.com
+    - peer1.org3.example.com
   Orderer:
     mspID: OrdererMSP
     cryptoPath: ordererOrganizations/example.com/users/{username}@example.com/msp
     peers:
       - orderer.example.com
+
 orderers:
   orderer.example.com:
     url: orderer.example.com:7050
@@ -185,6 +230,31 @@ peers:
     tlsCACerts:
       path: ../crypto/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
 
+  peer0.org3.example.com:
+    url: peer0.org3.example.com:7051
+    eventUrl: peer0.org3.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer0.org3.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
+
+  peer1.org3.example.com:
+    url: peer1.org3.example.com:7051
+    eventUrl: peer1.org3.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer1.org3.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
 #entityMatchers:
 #  peer:
 #    - pattern: peer0.org1.example.com:7051

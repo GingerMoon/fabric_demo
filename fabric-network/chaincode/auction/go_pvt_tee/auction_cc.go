@@ -1,55 +1,62 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	pbtee "github.com/hyperledger/fabric/protos/tee"
-	"github.com/pkg/errors"
+	"io"
 	"os"
+	"strconv"
+	"time"
 )
 
 const (
-	COLLECTION 	  = "collectionPayment"
+	COLLECTION 	  = "collectionAuction"
+	TIMEFORMAT	   = "2006-01-02 15:04:05.999999999 -0700 MST"
 )
 
 var (
-	//logger = shim.NewLogger("payment_cc")
-	logger = flogging.MustGetLogger("payment_cc")
+	//logger = shim.NewLogger("auction_cc")
+	logger = flogging.MustGetLogger("auction_cc")
 )
 
-type state struct {
-	Amount []byte `json:amount`
+type stateAuction struct {
+	Winner string `json:winner` // if Winner is "", then there is no winner (maybe there are tie bids)
+	Value string `json:value`
+	Start string `json:start`
+	End string `json:end`
+	Bids []string `bids`
+}
+
+type Auction struct {
+	Id   string `json:auctionId`
+	State     stateAuction `json:state`
+}
+
+type stateBid struct {
+	Cert string `json:cert`
+	Value string `json:value`
 	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
-type Payload struct {
-	From   string `json:from`
-	To     string `json:to`
-	State  state `json:state`
-	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
+type Bid struct {
+	Id   string `json:id`
+	State stateBid `json:state`
 }
 
-func (a *Payload) ToBytes() ([]byte, error) {
-	return json.Marshal(a)
+type Auctioncc struct {
 }
 
-func (a *Payload) FromBytes(d []byte) error {
-	return json.Unmarshal(d, a)
-}
-
-// Paymentcc example simple Chaincode implementation
-type Paymentcc struct {
-}
-
-func (t *Paymentcc) Init(stub shim.ChaincodeStubInterface) pb.Response {
+func (t *Auctioncc) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Info("Init")
 	return shim.Success(nil)
 }
 
-func (t *Paymentcc) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+func (t *Auctioncc) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	// get arguments and transient
 	f, args := stub.GetFunctionAndParameters()
 
@@ -61,141 +68,219 @@ func (t *Paymentcc) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	switch f {
 	case "create":
 		return t.create(stub, args)
+	case "end":
+		return t.end(stub, args)
 	case "query":
 		return t.query(stub, args)
-	case "transfer":
-		return t.transfer(stub, args)
+	case "bid":
+		return t.bid(stub, args)
 	default:
 		return shim.Error(fmt.Sprintf("Unsupported function %s", f))
 	}
 }
-// arg0 is the payload, payload.To is the state db key, which is also the public key.
-func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 1 {
+
+func (t *Auctioncc) create(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// stub.GetCreator() must be org1
+	// arguments are start time and end time.
+	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	payload_str := args[0]
+	StartingBid := args[2]
 
-	var payload Payload
-	payload.FromBytes([]byte(payload_str))
-
-	// input parameters check
-	if payload.From != "" {
-		return shim.Error(fmt.Sprintf("Create account(%s) failed! The [from(%s)] account must be empty.", payload.To, payload.From))
-	}
-	if payload.To != "0" && payload.To != "1" {
-		return shim.Error(fmt.Sprintf("Create account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.To))
-	}
-	stateBytes, _ := stub.GetPrivateData(COLLECTION, payload.To)
-	if stateBytes != nil {
-		return shim.Error(fmt.Sprintf("Create account(%s) failed! The account has already exists!", payload.To))
-	}
-
-	// PutPrivateData
-	state, _ := json.Marshal(payload.State)
-	err := stub.PutPrivateData(COLLECTION, payload.To, state)
+	start, err := time.Parse(TIMEFORMAT, args[0])
 	if err != nil {
-		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
+		return shim.Error(fmt.Sprintf("time parse (%s) failed. err %+v", args[0], err))
 	}
 
-	return shim.Success(nil)
+	end, err := time.Parse(TIMEFORMAT, args[1])
+	if err != nil {
+		return shim.Error(fmt.Sprintf("time parse (%s) failed. err %+v", args[1], err))
+	}
+
+	// auction id is generated randomly.
+	auctionIdbytes := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, auctionIdbytes); err != nil {
+		return shim.Error(fmt.Sprintf("Generating autionId failed! err %+v", err))
+	}
+
+	auctionId := base64.StdEncoding.EncodeToString(auctionIdbytes)
+	exists, _ := stub.GetState(auctionId)
+	if exists != nil {
+		return shim.Error(fmt.Sprintf("Create aution(%s) failed! The auction has already existed.", auctionId))
+	}
+
+	// fill in the state and store it.
+	var state stateAuction
+	state.Start = start.Format(TIMEFORMAT)
+	state.End = end.Format(TIMEFORMAT)
+	state.Value = StartingBid
+
+	statebytes, err := json.Marshal(state)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Marshal auction (%s) state (%s) failed, err %+v", auctionId, statebytes, err))
+	}
+	err = stub.PutState(auctionId, statebytes)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("put auction (%s) state (%s) failed, err %+v", auctionId, statebytes, err))
+	}
+
+	return shim.Success([]byte(auctionId))
 }
 
-// arg0 is the world state key
-func (t *Paymentcc) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Auctioncc) end(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// stub.GetCreator() must be org1
 	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting name of the person to query")
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+	auctionId := args[0]
+
+	// get auction state
+	auctionStatebytes, err := stub.GetState(auctionId)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Get aution(%s) failed! err: %+v", auctionId, err))
+	}
+	var auctionState stateAuction
+	err = json.Unmarshal([]byte(auctionStatebytes), &auctionState)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Unmarshal aution(%s : %s) failed! err: %+v", auctionId, auctionStatebytes, err))
 	}
 
-	key := args[0]
-	stateBytes, err := stub.GetPrivateData(COLLECTION, key)
+	// find the winner bid
+	var winnerBid Bid
+	winnerBid.State.Value = "0"
+	for _, bidId := range auctionState.Bids {
+		bidStateBytes, err := stub.GetPrivateData(COLLECTION, bidId)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("get bidder state (%s) failed, err: %+v", bidId, err))
+		}
+		var bidState stateBid
+		err = json.Unmarshal(bidStateBytes, &bidState)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("Unmarshal bid (%s : %s) failed! err: %+v", bidId, bidStateBytes, err))
+		}
+
+		bidValue, err := strconv.Atoi(string(bidState.Value))
+		if err != nil {
+			return shim.Error(fmt.Sprintf("bid (%s : %s) - Atoi bidState.value failed! err: %+v", bidId, bidStateBytes, err))
+		}
+		winnerValue, err := strconv.Atoi(string(winnerBid.State.Value))
+		if err != nil {
+			return shim.Error(fmt.Sprintf("bid (%s : %s) - Atoi winnerValue.value failed! err: %+v", bidId, winnerValue, err))
+		}
+
+		if bidValue > winnerValue {
+			logger.Infof("bidValue: %s, winnerValue: %d", string(bidState.Value), winnerValue)
+			auctionState.Winner = bidId
+			auctionState.Value = bidState.Value
+			winnerBid.Id = bidId
+			winnerBid.State = bidState
+		} else if bidValue == winnerValue {
+			logger.Infof("bidValue: %d, winnerValue: %d", bidValue, winnerValue)
+			auctionState.Winner = "" // tie
+		}
+	}
+
+	// update the auction state
+	auctionStatebytes, _ = json.Marshal(auctionState)
+	stub.PutState(auctionId, auctionStatebytes)
+
+	return shim.Success([]byte(fmt.Sprintf("the winner bid id is %s, value: %s", auctionState.Winner, auctionState.Value)))
+}
+
+func (t *Auctioncc) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting name of the auction to query")
+	}
+
+	auctionId := args[0]
+	stateBytes, err := stub.GetState(auctionId)
 	if err != nil {
-		return shim.Error(fmt.Sprintf("GetState %s failed. Err: %s", key, err.Error()))
+		return shim.Error(fmt.Sprintf("GetState %s failed. Err: %s", auctionId, err.Error()))
 	}
 
 	return shim.Success(stateBytes)
 }
 
-// Transfer from A to B.
-// arg0 is payload
-func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-	if len(args) != 1 {
+func (t *Auctioncc) bid(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// get cert and value
+	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	payload_str := args[0]
-	var payload Payload
-	payload.FromBytes([]byte(payload_str))
-
-	// input parameters check
-	if payload.From != "0" && payload.From != "1" {
-		return shim.Error(fmt.Sprintf("Transfer from account(%s) to account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.From, payload.To))
-	}
-	if payload.To != "0" && payload.To != "1" {
-		return shim.Error(fmt.Sprintf("Transfer from account(%s) to account(%s) failed! The account can only be 0(org1) or 1(org2).", payload.From, payload.To))
-	}
-	// creator check hasn't be finished because every time the fabric is restarted, the public key/certification is changed.
-	//if payload.From == "0" {
-	//	stub.GetCreator() must be 0
-	//} else if payload.From == "1" {
-	//	stub.GetCreator() must be 1
-	//}
-
-	if payload.From == payload.To {
-		return shim.Success(nil)
-	}
-
-	// get private data
-	stateAbytes, err := stub.GetPrivateData(COLLECTION, payload.From)
+	// check the bid time
+	auctionId := args[0]
+	auctionStateBytes, err := stub.GetState(auctionId)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get state for account %s failed.", payload.From)).Error())
+		return shim.Error(fmt.Sprintf("Get auction (%s) failed. err %+v", auctionId, err))
 	}
-	stateA := state{}
-	err = json.Unmarshal(stateAbytes, &stateA)
+	var auctionState stateAuction
+	err = json.Unmarshal(auctionStateBytes, &auctionState)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
+		return shim.Error(fmt.Sprintf("unmarshal auciton (%s : %s) failed. err: %s", auctionId, auctionStateBytes, err))
+	}
+	start, err := time.Parse(TIMEFORMAT, auctionState.Start)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("parse auciton (%s : %s) start time failed. err: %s", auctionId, auctionStateBytes, err))
+	}
+	end, err := time.Parse(TIMEFORMAT, auctionState.End)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("parse auciton (%s : %s) end time failed. err: %s", auctionId, auctionStateBytes, err))
+	}
+	now := time.Now()
+	if now.Before(start) {
+		return shim.Error(fmt.Sprintf("The auction (%s : %s) hasn't started. Now: %s. Started: %s",
+			auctionId, auctionStateBytes, now.Format(TIMEFORMAT), start.Format(TIMEFORMAT)))
+	}
+	if now.After(end) {
+		return shim.Error(fmt.Sprintf("The auction (%s : %s) has already ended. Now: %s. Ended: %s",
+			auctionId, auctionStateBytes, now.Format(TIMEFORMAT), end.Format(TIMEFORMAT)))
 	}
 
-	stateBbytes, err := stub.GetPrivateData(COLLECTION, payload.To)
+	// get cert and bid value
+	cert := args[1]
+	value := args[2]
+
+	// value cannot be smaller than StartingBid
+	bidPrice, err := strconv.Atoi(value)
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.To)).Error())
+		return shim.Error(fmt.Sprintf("Invalid bid value: %s. err %+v", value, err))
 	}
-	stateB := state{}
-	err = json.Unmarshal(stateBbytes, &stateB)
+	startingBid, err := strconv.Atoi(string(auctionState.Value))
 	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
+		return shim.Error(fmt.Sprintf("Invalid starting bid price: %s. err %+v", auctionState.Value, err))
+	}
+	if bidPrice <= startingBid {
+		return shim.Error(fmt.Sprintf("The bid price (%d) must bigger than the starting bid price (%d).", bidPrice, startingBid))
 	}
 
-	// Tee execution
-	var feed4decrytions []*pbtee.Feed4Decryption
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Amount, Nonce:stateA.Nonce})
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Amount, Nonce:stateB.Nonce})
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Amount, Nonce:payload.State.Nonce})
+	// stub.GetCreator() must equal to cert, not completed because every time fabric restart, certs changed.
 
-	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions, payload.Nonces)
+	// bid id is generated randomly.
+	bidIdbytes := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, bidIdbytes); err != nil {
+		return shim.Error(fmt.Sprintf("Generating bidIdbytes failed! err %+v", err))
+	}
+
+	bidId := base64.StdEncoding.EncodeToString(bidIdbytes)
+	bidState := stateBid {
+		Cert:cert,
+		Value:value,
+	}
+
+	// put bid state
+	bidStateBytes, err := json.Marshal(bidState)
 	if err != nil {
-		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
+		return shim.Error(fmt.Sprintf("Marshal bid (%s) state failed! err %+v", bidId, err))
 	}
-	if len(results.Feed4Decryptions) != 2 {
-		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results.Feed4Decryptions)))
-	}
+	stub.PutPrivateData(COLLECTION, bidId, bidStateBytes)
 
-	// update state db
-	stateAbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[0].Ciphertext, Nonce:results.Feed4Decryptions[0].Nonce})
-	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[0] failed")).Error())
-	}
-	stub.PutPrivateData(COLLECTION, payload.From, stateAbytes)
+	// update auction
+	auctionState.Bids = append(auctionState.Bids, bidId)
+	auctionStateBytes, _ = json.Marshal(auctionState)
+	stub.PutState(auctionId, auctionStateBytes)
 
-	stateBbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[1].Ciphertext, Nonce:results.Feed4Decryptions[1].Nonce})
-	if err != nil {
-		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[1] failed")).Error())
-	}
-	stub.PutPrivateData(COLLECTION, payload.To, stateBbytes)
-
-	return shim.Success(nil)
+	return shim.Success([]byte(bidId))
 }
 
 func main() {
@@ -204,7 +289,7 @@ func main() {
 		LogSpec: "DEBUG",
 	})
 
-	err := shim.Start(&Paymentcc{})
+	err := shim.Start(&Auctioncc{})
 	if err != nil {
 		logger.Errorf("Error starting payment chaincode: %s", err)
 	}
