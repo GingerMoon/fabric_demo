@@ -121,8 +121,7 @@ services:
         - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
         - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
         - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
-        - ../../payment-demo-tee:/opt/gopath/src/github.com/hyperledger/fabric/peer/payment-demo-tee
-        - ../../datakey:/opt/gopath/src/github.com/hyperledger/fabric/peer/datakey
+        - ../../auction-demo-tee:/opt/gopath/src/github.com/hyperledger/fabric/peer/auction-demo-tee
     depends_on:
       - orderer.example.com
       - peer0.org1.example.com

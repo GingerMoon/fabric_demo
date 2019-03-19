@@ -26,6 +26,10 @@ type ProposalSender interface {
 // TransactionID provides the identifier of a Fabric transaction proposal.
 type TransactionID string
 
+func (TransactionID) Error() string {
+	panic("implement me")
+}
+
 // EmptyTransactionID represents a non-existing transaction (usually due to error).
 const EmptyTransactionID = TransactionID("")
 
