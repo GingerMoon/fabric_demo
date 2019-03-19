@@ -1,0 +1,216 @@
+
+version: 1.0.0
+client:
+  organization: org1
+  logging:
+    level: info
+  cryptoconfig:
+    path: ../crypto
+  credentialStore:
+    path: "/tmp/state-store"
+    cryptoStore:
+      # Specific to the underlying KeyValueStore that backs the crypto key store.
+      path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp
+
+   # BCCSP config for the client. Used by GO SDK.
+  BCCSP:
+    security:
+     enabled: true
+     default:
+      provider: "SW"
+     hashAlgorithm: "SHA2"
+     softVerify: true
+     level: 256
+#  tlsCerts:
+#    client:
+#      key:
+#        path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls/client.key
+#      cert:
+#        path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls/client.crt
+
+channels:
+  _default:
+    peers:
+      peer1.org1.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+    policies:
+      queryChannelConfig:
+        minResponses: 1
+        maxTargets: 1
+        retryOpts:
+          attempts: 5
+          initialBackoff: 500ms
+          maxBackoff: 5s
+          backoffFactor: 2.0
+      discovery:
+        maxTargets: 2
+        retryOpts:
+          attempts: 4
+          initialBackoff: 500ms
+          maxBackoff: 5s
+          backoffFactor: 2.0
+      eventService:
+        resolverStrategy: PreferOrg
+        balancer: Random
+        blockHeightLagThreshold: 5
+        reconnectBlockHeightLagThreshold: 8
+        peerMonitorPeriod: 6s
+  mychannel:
+    peers:
+      peer0.org1.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+#      peer1.org1.example.com:
+#        endorsingPeer: true
+#        chaincodeQuery: true
+#        ledgerQuery: true
+#        eventSource: true
+#
+#      peer0.org2.example.com:
+#        endorsingPeer: true
+#        chaincodeQuery: true
+#        ledgerQuery: true
+#        eventSource: true
+#
+#      peer1.org2.example.com:
+#        endorsingPeer: true
+#        chaincodeQuery: true
+#        ledgerQuery: true
+#        eventSource: true
+
+organizations:
+  org1:
+    mspid: Org1MSP
+    cryptoPath:  peerOrganizations/org1.example.com/users/{username}@org1.example.com/msp
+    users:
+      Admin:
+        cert:
+          path: ../crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem
+      User1:
+        cert:
+          path: ../crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
+
+    peers:
+      - peer0.org1.example.com
+      - peer1.org1.example.com
+  org2:
+    mspid: Org2MSP
+    cryptoPath:  peerOrganizations/org2.example.com/users/{username}@org2.example.com/msp
+    users:
+      Admin:
+        cert:
+          path: ../crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/Admin@org2.example.com-cert.pem
+      User1:
+        cert:
+          path: ../crypto/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
+
+    peers:
+      - peer0.org2.example.com
+      - peer1.org2.example.com
+
+  Orderer:
+    mspID: OrdererMSP
+    cryptoPath: ordererOrganizations/example.com/users/{username}@example.com/msp
+    peers:
+      - orderer.example.com
+orderers:
+  orderer.example.com:
+    url: orderer.example.com:7050
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+
+peers:
+  peer0.org1.example.com:
+    url: peer0.org1.example.com:7051
+    eventUrl: peer0.org1.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer0.org1.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
+
+  peer1.org1.example.com:
+    url: peer1.org1.example.com:7051
+    eventUrl: peer1.org1.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer1.org1.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
+
+  peer0.org2.example.com:
+    url: peer0.org2.example.com:7051
+    eventUrl: peer0.org2.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer0.org2.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+
+  peer1.org2.example.com:
+    url: peer1.org2.example.com:7051
+    eventUrl: peer1.org2.example.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer1.org2.example.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: ../crypto/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+
+#entityMatchers:
+#  peer:
+#    - pattern: peer0.org1.example.com:7051
+#      urlSubstitutionExp: localhost:7051
+#      eventUrlSubstitutionExp: localhost:7053
+#      sslTargetOverrideUrlSubstitutionExp: peer0.org1.example.com
+#      mappedHost: peer0.org1.example.com
+#
+#    - pattern: peer1.org1.example.com:7051
+#      urlSubstitutionExp: localhost:8051
+#      eventUrlSubstitutionExp: localhost:8053
+#      sslTargetOverrideUrlSubstitutionExp: peer1.org1.example.com
+#      mappedHost: peer1.org1.example.com
+#
+#    - pattern: peer0.org2.example.com:7051
+#      urlSubstitutionExp: localhost:9051
+#      sslTargetOverrideUrlSubstitutionExp: peer0.org2.example.com
+#      mappedHost: peer0.org2.example.com
+#
+#    - pattern: peer1.org2.example.com:7051
+#      urlSubstitutionExp: localhost:10051
+#      sslTargetOverrideUrlSubstitutionExp: peer1.org2.example.com
+#      mappedHost: peer1.org2.example.com
+#
+#  orderer:
+#    - pattern: orderer.example.com:7050
+#      urlSubstitutionExp: localhost:7050
+#      sslTargetOverrideUrlSubstitutionExp: orderer.example.com
+#      mappedHost: orderer.example.com

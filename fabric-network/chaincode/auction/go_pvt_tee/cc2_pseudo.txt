@@ -1,0 +1,68 @@
+// transfer x$ from accountA to accountB, which means balanceA-x and balanceB+x.
+// put the new balanceA, balanceB or error msg into the fixed memory, so that they can be encrypted by the next component.
+// new balanceA, balanceB will be encrypted by the next component(ACE?).
+// error msg will NOT be encrypted by the next component.
+void main() {
+
+    // 0. addesses for the computation results(such as new balanceA, balanceB and error message.)
+    // elements in address_plaintextArgs_return will not be encrypted by the next phase, such as error message.
+    // elements in address_ciphertextArgs_return will be encrypted by the next phase, such as new balanceA and balanceB.
+
+    int* address_len_plaintextArgs_return = 0xxxxxxx; // the length of the plaintext arrary
+    char** address_plaintextArgs_return = 0xxxxxxx; // the plaintext arrary, every plaintext is a byte array.
+    int** address_len_plaintextArgsElement_return = 0xxxxxxx; // the arrary stores the len of plaintext arrary element
+
+    int* address_len_ciphertextArgs_return = 0xxxxxxx; // the length of the ciphertextArgs arrary
+    char** address_ciphertextArgs_return = 0xxxxxxx; // the ciphertextArgs arrary, every ciphertextArgs is a byte array.
+    int** address_len_ciphertextArgsElement_return = 0xxxxxxx; // the arrary stores the len of ciphertextArgs arrary element
+
+    memset(theAddressesAbove, 0)
+
+    // 1. the addresses below are the fixed address whcih has been protocoled with the previous component.
+    // address_ciphertextArgs contains the ciphertext args, which has already been decrypted by the previous component.
+    // in this case, 
+    // balanceA, balanceB and x were encrypted and sent to the driver and then have been decrypted by the previous component.
+    // address_plaintextArgs is empty.
+
+    int* address_len_plaintextArgs = 0xxxxxxx; // the length of the plaintext arrary
+    char** address_plaintextArgs = 0xxxxxxx; // the plaintext arrary, every plaintext is a byte array.
+    int** address_len_plaintextArgsElement = 0xxxxxxx; // the arrary stores the len of plaintext arrary element
+
+    int* address_len_ciphertextArgs = 0xxxxxxx; // the length of the ciphertextArgs arrary
+    char** address_ciphertextArgs = 0xxxxxxx; // the ciphertextArgs arrary, every ciphertextArgs is a byte array.
+    int** address_len_ciphertextArgsElement = 0xxxxxxx; // the arrary stores the len of ciphertextArgs arrary element
+
+    // 2. get balanceA, balanceB, x from the fixed memory
+    // in this case, *address_len_ciphertextArgs should be 3.
+
+    char* valueA = address_ciphertextArgs[0];
+    int len_valueA = address_len_ciphertextArgsElement[0];
+
+    char* valueB = address_ciphertextArgs[1];
+    int len_valueB = address_len_ciphertextArgsElement[1];
+
+    char* x = address_ciphertextArgs[2];
+    int len_x = address_len_ciphertextArgsElement[2];
+
+    // 3. concert balanceA, balanceB, x to int, BigEndian
+    int_valueA = int(valueA, len_valueA) 
+    int_valueB = int(valueB, len_valueB) 
+    int_valueX = int(valueX, len_valueX) 
+
+    // 4. check whether balanceA has enough balance x
+    if int_valueA - int_valueX  < 0 {
+        *address_len_plaintextArgs_return = 1;
+        address_plaintextArgs_return[0] = "not enough balance!";
+        address_len_plaintextArgs_return[0] = len("not enough balance!");
+    }
+
+    // 5. store the new balanceA, balanceB into the fixed memory. BigEndian
+    // so that the next component can encrypt these values.
+    *address_len_ciphertextArgs_return = 2;
+
+    address_ciphertextArgs_return[0] = int_valueA;
+    address_len_ciphertextArgsElement_return[0] = len(int_valueA);
+
+    address_ciphertextArgs_return[1] = int_valueB;
+    address_len_ciphertextArgsElement_return[1] = len(int_valueB);
+}
