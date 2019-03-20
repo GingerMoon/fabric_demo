@@ -122,6 +122,7 @@ services:
         - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
         - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
         - ../../auction-demo-tee:/opt/gopath/src/github.com/hyperledger/fabric/peer/auction-demo-tee
+        - ../../datakey:/opt/gopath/src/github.com/hyperledger/fabric/peer/datakey
     depends_on:
       - orderer.example.com
       - peer0.org1.example.com

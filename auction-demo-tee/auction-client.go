@@ -3,13 +3,17 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/pkg/errors"
-	"time"
+	"io"
 )
 
 const (
@@ -26,11 +30,18 @@ const (
 
 var logger = flogging.MustGetLogger("auction-demo-tee")
 
+type payloadBid struct {
+	AuctionId string `json:auction_id`
+	Value []byte `json:value`
+	Nonce []byte `json:nonce`
+	Cert []byte	 `json:cert`
+}
+
 type stateAuction struct {
 	Winner string `json:winner` // if Winner is "", then there is no winner (maybe there are tie bids)
 	Value string `json:value`
-	Start time.Time `json:start`
-	End time.Time `json:end`
+	Start string `json:start`
+	End string `json:end`
 	Bids []string `bids`
 }
 
@@ -39,15 +50,58 @@ type Auction struct {
 	State     stateAuction `json:state`
 }
 
-type stateBid struct {
-	Cert string `json:cert`
-	Value string `json:value`
-	Nonce   []byte `json:nonce` // used for decrypting amount
+type AES struct {
+	Key []byte
 }
 
-type Bid struct {
-	Id   string `json:id`
-	State stateBid `json:state`
+func NewAES() *AES{
+	return &AES {
+		Key:[]byte {
+			0xee, 0xbc, 0x1f, 0x57, 0x48, 0x7f, 0x51, 0x92, 0x1c, 0x04, 0x65, 0x66,
+			0x5f, 0x8a, 0xe6, 0xd1, 0x65, 0x8b, 0xb2, 0x6d, 0xe6, 0xf8, 0xa0, 0x69,
+			0xa3, 0x52, 0x02, 0x93, 0xa5, 0x72, 0x07, 0x8f,
+		},
+	}
+}
+
+func (a *AES) Encrypt(plaintext []byte) (ciphertext, nonce []byte) {
+	block, err := aes.NewCipher(a.Key)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+	nonce = make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
+	logger.Infof("plaintext is: %s, ciphertext is: %s", base64.StdEncoding.EncodeToString(plaintext), base64.StdEncoding.EncodeToString(ciphertext))
+	return
+}
+
+func (a *AES) Decrypt(ciphertext, nonce []byte) (plaintext []byte) {
+	block, err := aes.NewCipher(a.Key)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return
 }
 
 func Demo() error {
@@ -65,35 +119,30 @@ func Demo() error {
 		return errors.WithStack(err)
 	}
 
-	// start an auction
-	start := time.Now()
-	end := start.Add(time.Hour*1)
-	auctionId, txId, err := client.CreateAuction(start.Format(TIMEFORMAT), end.Format(TIMEFORMAT), "5")
-	if err != nil {
-		logger.Errorf("Created auction failed! txId: %s. error: %s", txId, err)
-		return err
-	}
-	logger.Infof("Created auction successfully. auctionId: %s. TxId: %s", auctionId, txId)
-
-	//auctionId := "6vrlM1enG+4AnbRE"
-
-	// bid 2
-	bidId, txId, err := client.Bid(auctionId, "20", []byte("Org2MSP"))
-	if err != nil {
-		logger.Errorf("org2 bided failed. TxId: %s. err: %s", txId, err)
-		return err
-	}
-	logger.Infof("org2 bided successfully. BidId: %s. TxId: %s", bidId, txId)
-
-	// bid 3
-	//bidId, txId, err = client.Bid(auctionId, "20", []byte("Org3MSP"))
+	//// start an auction
+	//start := time.Now()
+	//end := start.Add(time.Hour*1)
+	//auctionId, txId, err := client.CreateAuction(start.Format(TIMEFORMAT), end.Format(TIMEFORMAT), "5")
 	//if err != nil {
-	//	logger.Errorf("org3 bided failed. TxId: %s. err: %s", txId, err)
+	//	logger.Errorf("Created auction failed! txId: %s. error: %s", txId, err)
 	//	return err
 	//}
-	//logger.Infof("org3 bided successfully. BidId: %s. TxId: %s", bidId, txId)
+	//logger.Infof("Created auction successfully. auctionId: %s. TxId: %s", auctionId, txId)
 
-	// end auction
+	//auctionId := "7ymLSRrZpIwMRomh"
+
+	//// bid
+	//a := NewAES()
+	//cert := "Org2MSP"
+	//ciphertext, nonce := a.Encrypt([]byte("40"))
+	//bidId, txId, err := client.Bid(&payloadBid{AuctionId:auctionId, Value:ciphertext, Nonce:nonce, Cert:[]byte(cert)})
+	//if err != nil {
+	//	logger.Errorf("%s bided failed. TxId: %s. err: %s", cert, txId, err)
+	//	return err
+	//}
+	//logger.Infof("%s bided successfully. BidId: %s. TxId: %s", cert, bidId, txId)
+
+	//// end auction
 	//result, txId, err := client.EndAuction(auctionId)
 	//if err != nil {
 	//	logger.Errorf("Ended auction failed. auctionId: %s. TxId: %s. err: %s", auctionId, txId, err)
@@ -101,7 +150,7 @@ func Demo() error {
 	//}
 	//logger.Infof("Ended auction successfully. auction: %s. TxId: %s",result, txId)
 
-	// query auction
+	//// query auction
 	//auction, err := client.QueryAuction(auctionId)
 	//if err != nil {
 	//	logger.Errorf("Query auction failed. auctionId: %s. err: %s", auctionId, err)
@@ -177,8 +226,8 @@ func (c *AuctionClient) QueryAuction(auctionId string) (auction string, err erro
 	return
 }
 
-func (c *AuctionClient)  Bid(auctionId, value string, cert []byte) (bidId, txId string, err error) {
-	args := [][]byte{[]byte(auctionId), cert, []byte(value)}
+func (c *AuctionClient)  Bid(bid *payloadBid) (bidId, txId string, err error) {
+	args := [][]byte{[]byte(bid.AuctionId), bid.Cert, bid.Value, bid.Nonce}
 
 	response, err := c.client.Execute(
 		channel.Request{ChaincodeID: ccID, Fcn: "bid", Args: args},

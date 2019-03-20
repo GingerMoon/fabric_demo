@@ -8,9 +8,9 @@ import (
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	pbtee "github.com/hyperledger/fabric/protos/tee"
 	"io"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -39,7 +39,7 @@ type Auction struct {
 
 type stateBid struct {
 	Cert string `json:cert`
-	Value string `json:value`
+	Value []byte `json:value`
 	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
@@ -128,6 +128,8 @@ func (t *Auctioncc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	return shim.Success([]byte(auctionId))
 }
 
+// TODO
+// ended auction cannot be ended again.
 func (t *Auctioncc) end(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	// stub.GetCreator() must be org1
 	if len(args) != 1 {
@@ -146,10 +148,19 @@ func (t *Auctioncc) end(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		return shim.Error(fmt.Sprintf("Unmarshal aution(%s : %s) failed! err: %+v", auctionId, auctionStatebytes, err))
 	}
 
+	// TODO: check whether it's time to end auction.
+	//end, err := time.Parse(TIMEFORMAT, auctionState.End)
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("parse auciton end time failed. err: %s", err))
+	//}
+	//now := time.Now()
+	//if now.Before(end) {
+	//	return shim.Error(fmt.Sprintf("The auction hasm't been ended. Now: %s. Ended: %s", now.Format(TIMEFORMAT), end.Format(TIMEFORMAT)))
+	//}
+
 	// find the winner bid
 	var winnerBid Bid
-	winnerBid.State.Value = "0"
-	for _, bidId := range auctionState.Bids {
+	for i, bidId := range auctionState.Bids {
 		bidStateBytes, err := stub.GetPrivateData(COLLECTION, bidId)
 		if err != nil {
 			return shim.Error(fmt.Sprintf("get bidder state (%s) failed, err: %+v", bidId, err))
@@ -160,23 +171,34 @@ func (t *Auctioncc) end(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 			return shim.Error(fmt.Sprintf("Unmarshal bid (%s : %s) failed! err: %+v", bidId, bidStateBytes, err))
 		}
 
-		bidValue, err := strconv.Atoi(string(bidState.Value))
-		if err != nil {
-			return shim.Error(fmt.Sprintf("bid (%s : %s) - Atoi bidState.value failed! err: %+v", bidId, bidStateBytes, err))
-		}
-		winnerValue, err := strconv.Atoi(string(winnerBid.State.Value))
-		if err != nil {
-			return shim.Error(fmt.Sprintf("bid (%s : %s) - Atoi winnerValue.value failed! err: %+v", bidId, winnerValue, err))
-		}
-
-		if bidValue > winnerValue {
-			logger.Infof("bidValue: %s, winnerValue: %d", string(bidState.Value), winnerValue)
-			auctionState.Winner = bidId
-			auctionState.Value = bidState.Value
+		if i == 0 {
 			winnerBid.Id = bidId
 			winnerBid.State = bidState
-		} else if bidValue == winnerValue {
-			logger.Infof("bidValue: %d, winnerValue: %d", bidValue, winnerValue)
+			auctionState.Winner = bidId
+			auctionState.Value = base64.StdEncoding.EncodeToString(bidState.Value)
+			continue
+		}
+
+		// Tee execution
+		var feed4decrytions []*pbtee.Feed4Decryption
+		feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:[]byte(bidState.Value), Nonce:bidState.Nonce})
+		feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:[]byte(winnerBid.State.Value), Nonce:winnerBid.State.Nonce})
+
+		results, err := stub.TeeExecute([]byte("compare"), nil, feed4decrytions, nil)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
+		}
+		if len(results.Plaintexts) != 1 {
+			return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results.Plaintexts)))
+		}
+
+		// compare bidState and winnerBid
+		if  string(results.Plaintexts[0]) == "1" { // bidState is bigger than winnerBid
+			auctionState.Winner = bidId
+			auctionState.Value = base64.StdEncoding.EncodeToString(bidState.Value)
+			winnerBid.Id = bidId
+			winnerBid.State = bidState
+		} else if string(results.Plaintexts[0]) == "0" { // bidState equals winnerBid
 			auctionState.Winner = "" // tie
 		}
 	}
@@ -188,6 +210,8 @@ func (t *Auctioncc) end(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	return shim.Success([]byte(fmt.Sprintf("the winner bid id is %s, value: %s", auctionState.Winner, auctionState.Value)))
 }
 
+// TODO
+// only ended auction can be quired.
 func (t *Auctioncc) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting name of the auction to query")
@@ -204,7 +228,7 @@ func (t *Auctioncc) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 func (t *Auctioncc) bid(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	// get cert and value
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
@@ -219,6 +243,7 @@ func (t *Auctioncc) bid(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	if err != nil {
 		return shim.Error(fmt.Sprintf("unmarshal auciton (%s : %s) failed. err: %s", auctionId, auctionStateBytes, err))
 	}
+
 	start, err := time.Parse(TIMEFORMAT, auctionState.Start)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("parse auciton (%s : %s) start time failed. err: %s", auctionId, auctionStateBytes, err))
@@ -239,20 +264,29 @@ func (t *Auctioncc) bid(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 
 	// get cert and bid value
 	cert := args[1]
-	value := args[2]
+	value := []byte(args[2])
+	nonce := []byte(args[3])
+	//value, err := base64.StdEncoding.DecodeString(args[2])
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("args[2] need to be base64 encoded string. err: %+v", err))
+	//}
+	//nonce, err := base64.StdEncoding.DecodeString(args[3])
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("args[3] need to be base64 encoded string. err: %+v", err))
+	//}
 
-	// value cannot be smaller than StartingBid
-	bidPrice, err := strconv.Atoi(value)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Invalid bid value: %s. err %+v", value, err))
-	}
-	startingBid, err := strconv.Atoi(string(auctionState.Value))
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Invalid starting bid price: %s. err %+v", auctionState.Value, err))
-	}
-	if bidPrice <= startingBid {
-		return shim.Error(fmt.Sprintf("The bid price (%d) must bigger than the starting bid price (%d).", bidPrice, startingBid))
-	}
+	// TODO: value cannot be smaller than the StartingBid -- this should be calculated in tee. for now, we don't do this check for simplicity.
+	//bidPrice, err := strconv.Atoi(value)
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("Invalid bid value: %s. err %+v", value, err))
+	//}
+	//startingBid, err := strconv.Atoi(string(auctionState.Value))
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("Invalid starting bid price: %s. err %+v", auctionState.Value, err))
+	//}
+	//if bidPrice <= startingBid {
+	//	return shim.Error(fmt.Sprintf("The bid price (%d) must bigger than the starting bid price (%d).", bidPrice, startingBid))
+	//}
 
 	// stub.GetCreator() must equal to cert, not completed because every time fabric restart, certs changed.
 
@@ -266,6 +300,7 @@ func (t *Auctioncc) bid(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	bidState := stateBid {
 		Cert:cert,
 		Value:value,
+		Nonce:nonce,
 	}
 
 	// put bid state
