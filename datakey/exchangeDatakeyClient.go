@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	pb "github.com/hyperledger/fabric/peer/datakey/protos"
+	pb "github.com/hyperledger/fabric/protos/tee"
 	"google.golang.org/grpc"
 	"os"
 	"strconv"
