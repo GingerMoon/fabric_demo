@@ -107,7 +107,7 @@ func Demo() error {
 	defer sdk.Close()
 
 	logger.Infof("Creating %d clients", clientamount)
-	clients := make([]*PaymentClient, clientamount)
+	clients := make([]*PaymentClient, 1)
 	for i := 0; i < clientamount; i++ {
 		client, err := New(sdk)
 		if err != nil {
@@ -116,15 +116,16 @@ func Demo() error {
 		clients[i] = client
 	}
 
-	CreateAccounts(clients)
+	clients[0].CreateAccount(1, 1000)
+	//CreateAccounts(clients)
 
-	logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	Transfer(clients)
-	logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-
-	logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
-	logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
+	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//Transfer(clients)
+	//logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
+	//
+	//logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
+	//logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
+	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
 }
 
