@@ -23,7 +23,8 @@ LANGUAGE=`echo "$LANGUAGE" | tr [:upper:] [:lower:]`
 COUNTER=1
 MAX_RETRY=10
 
-CC_SRC_PATH="github.com/chaincode/auction/go_pvt_tee/"
+#CC_SRC_PATH="github.com/chaincode/auction/go_pvt_tee/"
+CC_SRC_PATH="github.com/chaincode/chaincode_example02/go_pvt_tee/"
 if [ "$LANGUAGE" = "node" ]; then
 	CC_SRC_PATH="/opt/gopath/src/github.com/chaincode/chaincode_example02/node/"
 fi
