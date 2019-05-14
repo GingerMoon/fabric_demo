@@ -20,15 +20,16 @@ var (
 	logger = flogging.MustGetLogger("payment_cc")
 )
 
-type state struct {
-	Amount []byte `json:amount`
+type encryptedContent struct {
+	Content []byte `json:content`
 	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	State  state `json:state`
+	State  encryptedContent `json:state`
+	Elf    encryptedContent `json:elf`
 	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
 }
 
@@ -152,7 +153,7 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get state for account %s failed.", payload.From)).Error())
 	}
-	stateA := state{}
+	stateA := encryptedContent{}
 	err = json.Unmarshal(stateAbytes, &stateA)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
@@ -162,7 +163,7 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("get balance for account %s failed.", payload.To)).Error())
 	}
-	stateB := state{}
+	stateB := encryptedContent{}
 	err = json.Unmarshal(stateBbytes, &stateB)
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("unmarshall state for account %s failed.", payload.From)).Error())
@@ -170,9 +171,10 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 
 	// Tee execution
 	var feed4decrytions []*pbtee.Feed4Decryption
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Amount, Nonce:stateA.Nonce})
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Amount, Nonce:stateB.Nonce})
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Amount, Nonce:payload.State.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.Elf.Content, Nonce:payload.Elf.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Content, Nonce:stateA.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Content, Nonce:stateB.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Content, Nonce:payload.State.Nonce})
 
 	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions, payload.Nonces)
 	if err != nil {
@@ -183,13 +185,13 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	}
 
 	// update state db
-	stateAbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[0].Ciphertext, Nonce:results.Feed4Decryptions[0].Nonce})
+	stateAbytes, err = json.Marshal(encryptedContent{Content:results.Feed4Decryptions[0].Ciphertext, Nonce:results.Feed4Decryptions[0].Nonce})
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[0] failed")).Error())
 	}
 	stub.PutPrivateData(COLLECTION, payload.From, stateAbytes)
 
-	stateBbytes, err = json.Marshal(state{Amount:results.Feed4Decryptions[1].Ciphertext, Nonce:results.Feed4Decryptions[1].Nonce})
+	stateBbytes, err = json.Marshal(encryptedContent{Content:results.Feed4Decryptions[1].Ciphertext, Nonce:results.Feed4Decryptions[1].Nonce})
 	if err != nil {
 		return shim.Error(errors.WithMessage(err, fmt.Sprintf("marshal Tee Execution results.Feed4Decryptions[1] failed")).Error())
 	}

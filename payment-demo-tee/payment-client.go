@@ -3,7 +3,6 @@
 package main
 
 import (
-	"container/list"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -18,11 +17,9 @@ import (
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/pkg/errors"
 	"io"
-	mrand "math/rand"
+	"io/ioutil"
 	"os"
 	"strconv"
-	"sync"
-	"time"
 )
 
 const (
@@ -43,16 +40,17 @@ var key = []byte {
 0xa3, 0x52, 0x02, 0x93, 0xa5, 0x72, 0x07, 0x8f,
 }
 
-type state struct {
-	Amount []byte `json:amount`
+type encryptedContent struct {
+	Content []byte `json:content`
 	Nonce   []byte `json:nonce` // used for decrypting amount
 }
 
 type payload struct {
-	From   string `json:from`
-	To     string `json:to`
-	State  state `json:state`
-	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
+	From   string           `json:from`
+	To     string           `json:to`
+	State  encryptedContent `json:state`
+	Elf    encryptedContent `json:elf`
+	Nonces [][]byte         `json:nonces` // used for encrypting PutPrivateData
 }
 
 func (a *payload) ToBytes() ([]byte, error) {
@@ -101,7 +99,7 @@ func getEnvironment() (int, int, int) {
 	return clientamount, accounts, amount
 }
 
-func aesEncrypt(plaintext []byte) *state {
+func aesEncrypt(plaintext []byte) *encryptedContent {
 		block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
@@ -120,10 +118,10 @@ func aesEncrypt(plaintext []byte) *state {
 
 	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
 	logger.Infof("plaintext is: %s, ciphertext is: %s", base64.StdEncoding.EncodeToString(plaintext), base64.StdEncoding.EncodeToString(ciphertext))
-	return &state{ciphertext, nonce}
+	return &encryptedContent{ciphertext, nonce}
 }
 
-func getCiphertextOfData() (balance, x *state) {
+func getCiphertextOfData() (balance, x, elf *encryptedContent) {
 	plaintextBalance := make([]byte, 4)
 	binary.BigEndian.PutUint32(plaintextBalance, 100)
 	balance = aesEncrypt(plaintextBalance)
@@ -131,10 +129,16 @@ func getCiphertextOfData() (balance, x *state) {
 	plaintextX := make([]byte, 4)
 	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
 	x = aesEncrypt(plaintextX)
+
+	plaintextElf, err := ioutil.ReadFile("./elf_payment.hex")
+	if err != nil {
+		panic(err.Error())
+	}
+	elf = aesEncrypt(plaintextElf)
 	return
 }
 
-func decryptState(state *state) int {
+func decryptState(state *encryptedContent) int {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
@@ -145,7 +149,7 @@ func decryptState(state *state) int {
 		panic(err.Error())
 	}
 
-	plaintext, err := aesgcm.Open(nil, state.Nonce, state.Amount, nil)
+	plaintext, err := aesgcm.Open(nil, state.Nonce, state.Content, nil)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -172,10 +176,10 @@ func Demo() error {
 		clients[i] = client
 	}
 
-	balance, x := getCiphertextOfData()
+	balance, x, elf := getCiphertextOfData()
 	clients[0].CreateAccount(0, balance)
 	clients[0].CreateAccount(1, balance)
-	txid, err := clients[0].Transfer(0, 1, x)
+	txid, err := clients[0].Transfer(0, 1, x, elf)
 	if err != nil {
 		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
@@ -184,7 +188,7 @@ func Demo() error {
 	clients[0].GetState(0)
 	clients[0].GetState(1)
 
-	txid, err = clients[0].Transfer(0, 1, x)
+	txid, err = clients[0].Transfer(0, 1, x, elf)
 	if err != nil {
 		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
@@ -193,128 +197,7 @@ func Demo() error {
 	clients[0].GetState(0)
 	clients[0].GetState(1)
 
-	//CreateAccounts(clients)
-	//
-	//logger.Infof("Before the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	//Transfer(clients)
-	//logger.Infof("After the transactions, the total amount of the network is %d", GetNetworkTotalAmount(clients))
-	//
-	//logger.Infof("Queries: %d, Elapsed time: %dms, QPS: %d", accounts, elapsed4Query, accounts*1000/elapsed4Query)
-	//logger.Infof("CreateAccounts: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4CreateAccounts, accounts*1000/elapsed4CreateAccounts)
-	//logger.Infof("Transfer: %d, Elapsed time: %dms, TPS: %d", accounts, elapsed4Transfer, accounts*1000/elapsed4Transfer)
 	return nil
-}
-
-func CreateAccounts(clients []*PaymentClient) {
-	balance, _ := getCiphertextOfData()
-
-	var fense sync.WaitGroup
-	start := time.Now()
-
-	// crate accounts in the blockchain.
-	for c, _ := range clients {
-		fense.Add(1)
-		go func(cc int) {
-			defer fense.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				clients[i%clientamount].CreateAccount(i, balance)
-			}
-		}(c)
-	}
-	fense.Wait()
-	elapsed4CreateAccounts = int(time.Since(start) / time.Millisecond)
-}
-
-func GetNetworkTotalAmount(clients []*PaymentClient) int {
-	var fense sync.WaitGroup
-	start := time.Now()
-
-	totalAmount := 0
-	ch := make(chan int)
-
-	fense.Add(1)
-	go func() {
-		defer fense.Done()
-		for {
-			balance, ok := <- ch
-			if !ok {
-				return
-			} else {
-				totalAmount += balance
-			}
-		}
-	}()
-
-	var w sync.WaitGroup
-	for c, _ := range clients {
-		w.Add(1)
-		go func(cc int) {
-			defer w.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				balance := clients[i%clientamount].GetState(i)
-				ch <- balance
-			}
-		}(c)
-	}
-	w.Wait()
-	close(ch)
-
-	fense.Wait()
-	elapsed4Query = int(time.Since(start) / time.Millisecond)
-	return totalAmount
-}
-
-func Transfer(clients []*PaymentClient) {
-	_, x := getCiphertextOfData()
-
-	var fense sync.WaitGroup
-	start := time.Now()
-
-	// print failed tx message at last in a batch
-	txErrCh := make(chan string, 100)
-	fense.Add(1)
-	go func () {
-		defer fense.Done()
-		l := list.New()
-		for {
-			errmsg, ok := <-txErrCh
-			if ok {
-				l.PushBack(errmsg)
-			} else {
-				break
-			}
-		}
-
-		logger.Infof("----- the following transactions failed: -----")
-		for e:= l.Front(); e != nil; e = e.Next() {
-			logger.Infof("\n %v \n ", e.Value)
-		}
-	}()
-
-	// simulate the transaction
-	s1 := mrand.NewSource(time.Now().UnixNano())
-	r1 := mrand.New(s1)
-
-	var w sync.WaitGroup
-	for c, _ := range clients {
-		w.Add(1)
-		go func(cc int) {
-			defer w.Done()
-			for i := cc; i < accounts; i += len(clients) {
-				from := r1.Intn(clientamount)
-				to := r1.Intn(clientamount)
-				_, err := clients[i%clientamount].Transfer(from, to, x)
-				if err != nil {
-					txErrCh <- err.Error()
-				}
-			}
-		}(c)
-	}
-	w.Wait()
-	close(txErrCh)
-
-	fense.Wait()
-	elapsed4Transfer = int(time.Since(start) / time.Millisecond)
 }
 
 type PaymentClient struct {
@@ -332,49 +215,6 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 	return &PaymentClient{client}, nil
 }
 
-func (c *PaymentClient) transfer() {
-	_, x := getCiphertextOfData()
-
-	// print failed tx message at last in a batch
-	txErrCh := make(chan string, 100)
-	defer close(txErrCh)
-	go func () {
-		l := list.New()
-		for {
-			errmsg := <-txErrCh
-			if len(errmsg) != 0 {
-				l.PushBack(errmsg)
-			} else {
-				break
-			}
-		}
-
-		logger.Infof("----- the following transactions failed: -----")
-		for e:= l.Front(); e != nil; e = e.Next() {
-			logger.Infof("\n %v \n ", e.Value)
-		}
-	}()
-
-	// simulate the transaction
-	s1 := mrand.NewSource(time.Now().UnixNano())
-	r1 := mrand.New(s1)
-	var wg sync.WaitGroup
-	for i := 0; i < clientamount*2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			from := r1.Intn(clientamount)
-			to := r1.Intn(clientamount)
-			_, err := c.Transfer(from, to, x)
-			if err != nil {
-				txErrCh <- err.Error()
-			}
-		}()
-	}
-	wg.Wait()
-}
-
 func (c *PaymentClient) GetNetworkTotalAmount() int {
 	totalAmount := 0
 	for i := 0; i < clientamount; i++ {
@@ -384,7 +224,7 @@ func (c *PaymentClient) GetNetworkTotalAmount() int {
 	return totalAmount
 }
 
-func (c *PaymentClient) CreateAccount(index int, amount *state) error {
+func (c *PaymentClient) CreateAccount(index int, amount *encryptedContent) error {
 	tmp := payload{From: "", To: strconv.Itoa(index), State: *amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
@@ -414,7 +254,7 @@ func (c *PaymentClient) GetState(index int) int {
 	if err != nil {
 		logger.Fatalf("Failed to query funds: %s", err)
 	}
-	state := state{}
+	state := encryptedContent{}
 	json.Unmarshal(response.Payload, &state)
 
 	balance := decryptState(&state)
@@ -422,7 +262,7 @@ func (c *PaymentClient) GetState(index int) int {
 	return balance
 }
 
-func (c *PaymentClient)  Transfer(from, to int, amount *state) (string, error) {
+func (c *PaymentClient)  Transfer(from, to int, amount, elf *encryptedContent) (string, error) {
 	// generate nonces for encrypting updated state.
 	nonces := make([][]byte, 2)
 	for i:=0; i < 2; i++ {
@@ -433,7 +273,7 @@ func (c *PaymentClient)  Transfer(from, to int, amount *state) (string, error) {
 		nonces[i] = nonce
 	}
 
-	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount, Nonces:nonces}
+	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount, Elf: *elf, Nonces:nonces}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return "", errors.WithMessage(err, "Transfer failed (marshall payload).")
