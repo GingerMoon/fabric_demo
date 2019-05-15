@@ -35,7 +35,7 @@ message PlainCiphertexts {
 }
 
 message Feed4Decryption {
-    bytes ciphertext = 1; // 密文. todo 目前硬件只支持128bit和256bit. 所以客户端加密的时候需要填满 128/256 bits
+    bytes ciphertext = 1; // 密文. todo 数据128 bits(16 bytes)的整数倍, elf/hex 是 256 bits(32 bytes)的整数倍.
     bytes nonce = 2; // 解密密文所需的nonce
     // todo 这里还有一个aes_gcm的additional_data字段没加, 下一个版本加上.
 }

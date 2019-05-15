@@ -122,18 +122,24 @@ func aesEncrypt(plaintext []byte) *encryptedContent {
 }
 
 func getCiphertextOfData() (balance, x, elf *encryptedContent) {
-	plaintextBalance := make([]byte, 4)
+	plaintextBalance := make([]byte, 16)
 	binary.BigEndian.PutUint32(plaintextBalance, 100)
 	balance = aesEncrypt(plaintextBalance)
 
-	plaintextX := make([]byte, 4)
+	plaintextX := make([]byte, 16)
 	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
 	x = aesEncrypt(plaintextX)
 
 	plaintextElf, err := ioutil.ReadFile("./elf_payment.hex")
+	logger.Errorf("size of plaintext elf bytes: %d", len(plaintextElf))
 	if err != nil {
 		panic(err.Error())
 	}
+	paddingCount := len(plaintextElf) - len(plaintextElf) / 32 * len(plaintextElf) // elf/hex has to be integral multiples of 256 bits/32 bytes
+	for i := 0; i < paddingCount; i++ {
+		plaintextElf = append(plaintextElf, 0)
+	}
+
 	elf = aesEncrypt(plaintextElf)
 	return
 }
