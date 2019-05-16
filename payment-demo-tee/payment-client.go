@@ -135,7 +135,7 @@ func getCiphertextOfData() (balance, x, elf *encryptedContent) {
 	if err != nil {
 		panic(err.Error())
 	}
-	paddingCount := len(plaintextElf) - len(plaintextElf) / 32 * len(plaintextElf) // elf/hex has to be integral multiples of 256 bits/32 bytes
+	paddingCount := (len(plaintextElf) / 32 + 1) * 32 - len(plaintextElf) // elf/hex has to be integral multiples of 256 bits/32 bytes
 	for i := 0; i < paddingCount; i++ {
 		plaintextElf = append(plaintextElf, 0)
 	}

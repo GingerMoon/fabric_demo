@@ -47,7 +47,7 @@ func exchangeDataKey() {
 		0xa3, 0x52, 0x02, 0x93, 0xa5, 0x72, 0x07, 0x8f,
 	}
 	logger.Infof("the AES datakey is: %s", base64.StdEncoding.EncodeToString(aeskey))
-	label := []byte("datakey")
+	label := []byte("")
 
 	rng := rand.Reader
 
