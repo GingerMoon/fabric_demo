@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -37,8 +37,8 @@ func exchangeDataKey() {
 	N: %s a7d134aef43b25bf19bcfcbff61e4a84bcbd62ff31dc2ba93d7768c0977a4f313d6c1d75ac861b880c33a530bc8f171d787e9abc6326c9579d2e3554e5dbec6b9684f06a72d3120d26ad4ba22c0ef5b5ec826f8b2be9ee96e9284010b28ab0211ad135d22138403313ed5722586e1a87e2a546271c5cb349fdf6ffedcb82d60ae9f874a6e1dbfbc5e58cec957ecc5706fdcb03390c496fc436b1359a0df4bab5d0ffa049f040177b17950269e86546274f679e921eda82e6deb761fb624cced8830bfd21c9c14ff77fe6ef0bb11d0653e97be01c48fe79a6433525512f8bbf6a116291c873bea99e4405f72c109d6d42020124e18872d4921c9984ae30c9a3f9
 	E: %d 65537
 	*/
-	N, _ := new(big.Int).SetString("a7d134aef43b25bf19bcfcbff61e4a84bcbd62ff31dc2ba93d7768c0977a4f313d6c1d75ac861b880c33a530bc8f171d787e9abc6326c9579d2e3554e5dbec6b9684f06a72d3120d26ad4ba22c0ef5b5ec826f8b2be9ee96e9284010b28ab0211ad135d22138403313ed5722586e1a87e2a546271c5cb349fdf6ffedcb82d60ae9f874a6e1dbfbc5e58cec957ecc5706fdcb03390c496fc436b1359a0df4bab5d0ffa049f040177b17950269e86546274f679e921eda82e6deb761fb624cced8830bfd21c9c14ff77fe6ef0bb11d0653e97be01c48fe79a6433525512f8bbf6a116291c873bea99e4405f72c109d6d42020124e18872d4921c9984ae30c9a3f9", 16)
-	publicKey := rsa.PublicKey{N, 65537}
+	N, _ := new(big.Int).SetString("ae45ed5601cec6b8cc05f803935c674ddbe0d75c4c09fd7951fc6b0caec313a8df39970c518bffba5ed68f3f0d7f22a4029d413f1ae07e4ebe9e4177ce23e7f5404b569e4ee1bdcf3c1fb03ef113802d4f855eb9b5134b5a7c8085adcae6fa2fa1417ec3763be171b0c62b760ede23c12ad92b980884c641f5a8fac26bdad4a03381a22fe1b754885094c82506d4019a535a286afeb271bb9ba592de18dcf600c2aeeae56e02f7cf79fc14cf3bdc7cd84febbbf950ca90304b2219a7aa063aefa2c3c1980e560cd64afe779585b6107657b957857efde6010988ab7de417fc88d8f384c4e6e72c3f943e0c31c0c4a5cc36f879d8a3ac9d7d59860eaada6b83bb", 16)
+	publicKey := rsa.PublicKey{N, 0x10001}
 
 
 	aeskey := []byte {
@@ -51,7 +51,7 @@ func exchangeDataKey() {
 
 	rng := rand.Reader
 
-	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rng, &publicKey, aeskey, label)
+	ciphertext, err := rsa.EncryptOAEP(sha1.New(), rng, &publicKey, aeskey, label)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error from encryption: %s\n", err)
 		return

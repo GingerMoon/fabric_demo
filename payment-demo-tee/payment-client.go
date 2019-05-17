@@ -131,7 +131,6 @@ func getCiphertextOfData() (balance, x, elf *encryptedContent) {
 	x = aesEncrypt(plaintextX)
 
 	plaintextElf, err := ioutil.ReadFile("./elf_payment.hex")
-	logger.Errorf("size of plaintext elf bytes: %d", len(plaintextElf))
 	if err != nil {
 		panic(err.Error())
 	}
