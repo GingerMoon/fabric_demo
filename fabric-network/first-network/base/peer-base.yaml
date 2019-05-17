@@ -25,9 +25,11 @@ services:
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
       - TEE_FPGA_MOCK=1
-      - FPGA_MOCK=1
+#      - TEE_FPGA_SERVER_ADDR=172.17.0.1:50121
+#      - TEE_FPGA_SERVER_ADDR=peer0.org1.example.com:20000
+      #- FPGA_MOCK=1
       # - FPGA_SERVER_ADDR=172.17.0.1:50021
-      - FPGA_SERVER_ADDR=127.0.0.1:10000
+      # - FPGA_SERVER_ADDR=127.0.0.1:10000
     volumes:
       - ../../bin:/opt/gopath/src/github.com/hyperledger/fabric/peer/
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
