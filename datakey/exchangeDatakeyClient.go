@@ -37,9 +37,12 @@ func(w *worker) start() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			_, err := w.conn.ExchangeDataKey(ctx, task.in)
+			resp, err := w.conn.ExchangeDataKey(ctx, task.in)
 			if err != nil {
 				logger.Errorf("Execute() failed!  %v: ", err)
+				task.out.errCh <- err
+			} else if resp.Result != 0 {
+				logger.Errorf("Execute() failed!  error code: %v: ", resp.Result)
 				task.out.errCh <- err
 			} else {
 				task.out.errCh <- nil

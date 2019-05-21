@@ -14,13 +14,10 @@ syntax = "proto3";
 
 package protos;
 
-import "google/protobuf/empty.proto";
-
-
 // Interface exported by the server.
 service Tee {
     rpc Execute(TeeArgs) returns (PlainCiphertexts) {}
-    rpc ExchangeDataKey(DataKeyArgs) returns (ErrorInfo) {} // !!!更新: 原来是google.protobuf.Empty, 现在改为string, 用来判断ExchangeDataKey调用是否成功.因为C++的驱动找不到empty类型. string里面包含错误信息, 为空代表成功. 不管该rpc调用是否成功
+    rpc ExchangeDataKey(DataKeyArgs) returns (ExchangeDataKeyResult) {} // todo rsa encryption should use sha256 instead. for now yaming uses sha1.
 }
 
 message TeeArgs {
@@ -45,6 +42,6 @@ message DataKeyArgs {
     bytes label = 2; // RSA解密算法所需要使用的label,是个普通的字符串, 也可以是空字符串. 现在可能和硬件约定了是空字符串,如果确定是这样那么就不需要这个字段了.
 }
 
-message ErrorInfo {
-    string err = 1;
+message ExchangeDataKeyResult {
+    int32 result = 1;
 }
