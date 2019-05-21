@@ -20,26 +20,31 @@ import "google/protobuf/empty.proto";
 // Interface exported by the server.
 service Tee {
     rpc Execute(TeeArgs) returns (PlainCiphertexts) {}
-    rpc ExchangeDataKey(DataKeyArgs) returns (google.protobuf.Empty) {}
+    rpc ExchangeDataKey(DataKeyArgs) returns (ErrorInfo) {} // !!!更新: 原来是google.protobuf.Empty, 现在改为string, 用来判断ExchangeDataKey调用是否成功.因为C++的驱动找不到empty类型. string里面包含错误信息, 为空代表成功. 不管该rpc调用是否成功 todo rsa encryption should use sha256 instead.
 }
 
 message TeeArgs {
-    bytes elf = 1;
-    PlainCiphertexts plainCipherTexts = 2;
-    repeated bytes nonces = 3; // due to the blockchain rules, HW must use the same nonce for encrypting the confidential results (which is returned in Feed4Decryption).
+    bytes elf = 1; // 暂时保留下来, 方便mockserver测试以及后续可能会需要. 加密的elf/hex 可以从plainCipherTexts.feed4Decryptions[0]中获得. 注意!!! todo 驱动请忽视这个字段.
+    PlainCiphertexts plainCipherTexts = 2; // plaintext是明文. ciphertext是密文
+    repeated bytes nonces = 3; // nonce数组, 有些情况下, 返回的结果需要硬件加密. 硬件加密的时候需要使用传进来的这个nonces数组. 如果使用硬件自己的随机生成nonce, 那么同样的明文加密后的密文会不一样,区块链会报错.
 }
 
 message PlainCiphertexts {
-    repeated  bytes plaintexts = 1;
-    repeated  Feed4Decryption feed4Decryptions = 2;
+    repeated  bytes plaintexts = 1; // 明文. !!!注意:此处的明文有别于aes_gcm中的additional_data. 注意!!!(和胡总沟通过, 需要此字段的业务场景可能不多, 暂时先保留) todo 驱动请忽视这个字段.
+    repeated  Feed4Decryption feed4Decryptions = 2; // 密文, 以及解密该密文所需要的东西. 注意!!! todo feed4Decryptions[0] 为加密的elf/hex
 }
 
 message Feed4Decryption {
-    bytes ciphertext = 1;
-    bytes nonce = 2;
+    bytes ciphertext = 1; // 密文. todo 数据128 bits(16 bytes)的整数倍, elf/hex 是 256 bits(32 bytes)的整数倍.
+    bytes nonce = 2; // 解密密文所需的nonce
+    // todo 这里还有一个aes_gcm的additional_data字段没加, 下一个版本加上.
 }
 
 message DataKeyArgs {
-    bytes datakey = 1; // the encrypted AES key
-    bytes label = 2; // rsa label
+    bytes datakey = 1; // AES加解密算法所需要的秘钥
+    bytes label = 2; // RSA解密算法所需要使用的label,是个普通的字符串, 也可以是空字符串. 现在可能和硬件约定了是空字符串,如果确定是这样那么就不需要这个字段了.
+}
+
+message ErrorInfo {
+    string err = 1;
 }
