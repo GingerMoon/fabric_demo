@@ -47,7 +47,8 @@ func exchangeDataKey() {
 		0xa3, 0x52, 0x02, 0x93, 0xa5, 0x72, 0x07, 0x8f,
 	}
 	logger.Infof("the AES datakey is: %s", base64.StdEncoding.EncodeToString(aeskey))
-	label := []byte("")
+	// label := []byte("12345678901234567890") // todo hw requires the label must be 20 bytes
+	label := []byte{} // from Yaming the label byte array has to be empty.
 
 	rng := rand.Reader
 
@@ -58,7 +59,7 @@ func exchangeDataKey() {
 	}
 	logger.Infof("Ciphertext of AES datakey: %x\n", ciphertext)
 
-	err = ExchangeDataKey(ciphertext, label)
+	err = ExchangeDataKey(ciphertext, sha1.New().Sum(label)) // from yaming the proto.label must be sha1
 	if err != nil {
 		logger.Error("exchange datakey failed. err: %s", err.Error())
 	}

@@ -139,6 +139,18 @@ func getCiphertextOfData() (balance, x, elf *encryptedContent) {
 		plaintextElf = append(plaintextElf, 0)
 	}
 
+	// todo due to the hw bug, the elf need to be inverted
+	var plaintextBin []byte
+	for i := 0; i < len(plaintextElf); i = i + 8 {
+		//	fmt.Println("==============")
+		//	fmt.Println(i)
+		for j := 0; j < 8; j++ {
+			plaintextBin = append(plaintextBin, plaintextElf[i+7-j])
+			//  fmt.Println(plaintextElf[i+j])
+		}
+
+	}
+
 	elf = aesEncrypt(plaintextElf)
 	return
 }
