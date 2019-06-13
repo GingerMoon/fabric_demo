@@ -130,7 +130,7 @@ func getCiphertextOfData() (balance, x, elf *encryptedContent) {
 	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
 	x = aesEncrypt(plaintextX)
 
-	plaintextElf, err := ioutil.ReadFile("./elf_payment.hex")
+	plaintextElf, err := ioutil.ReadFile("./elf_payment.bin")
 	if err != nil {
 		panic(err.Error())
 	}
