@@ -170,7 +170,7 @@ func decryptState(state *encryptedContent) int {
 	if err != nil {
 		panic(err.Error())
 	}
-	return int(binary.BigEndian.Uint32(plaintext))
+	return int(binary.BigEndian.Uint32(plaintext[8:12]))
 }
 
 func Demo() error {
