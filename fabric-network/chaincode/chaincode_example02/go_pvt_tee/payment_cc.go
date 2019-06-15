@@ -181,7 +181,7 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
 	}
 	if len(results.Feed4Decryptions) != 2 {
-		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. %d", len(results.Feed4Decryptions)))
+		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. results.Feed4Decryptions is: %d", len(results.Feed4Decryptions)))
 	}
 
 	// update state db

@@ -62,32 +62,29 @@ func (a *payload) FromBytes(d []byte) error {
 }
 
 var (
-	clientamount, accounts, amount = getEnvironment()
-	elapsed4CreateAccounts = 0
-	elapsed4Transfer = 0
-	elapsed4Query = 0
+	balanceFrom, balanceTo,	amount = getEnvironment()
 )
 
 func getEnvironment() (int, int, int) {
-	val, ok := os.LookupEnv("CLIENT_AMOUNT")
+	val, ok := os.LookupEnv("balanceFrom")
 	if !ok {
-		logger.Fatalf("Please set environment variable CLIENT_AMOUNT")
+		logger.Fatalf("Please set environment variable balanceFrom")
 	}
-	clientamount, err := strconv.Atoi(val)
+	balanceFrom, err := strconv.Atoi(val)
 	if err != nil {
-		logger.Fatalf("Illeagle environment variable CLIENT_AMOUNT: %s", val)
+		logger.Fatalf("Illeagle environment variable balanceFrom: %s", val)
 	}
 
-	val, ok = os.LookupEnv("ACCOUNTS")
+	val, ok = os.LookupEnv("balanceTo")
 	if !ok {
-		logger.Fatalf("Please set environment variable ACCOUNTS")
+		logger.Fatalf("Please set environment variable balanceTo")
 	}
-	accounts, err := strconv.Atoi(val)
+	balanceTo, err := strconv.Atoi(val)
 	if err != nil {
-		logger.Fatalf("Illeagle environment variable ACCOUNTS: %s", val)
+		logger.Fatalf("Illeagle environment variable balanceTo: %s", val)
 	}
 
-	val, ok = os.LookupEnv("AMOUNT")
+	val, ok = os.LookupEnv("amount")
 	if !ok {
 		logger.Fatalf("Please set environment variable AMOUNT")
 	}
@@ -96,11 +93,11 @@ func getEnvironment() (int, int, int) {
 		logger.Fatalf("Illeagle environment variable AMOUNT: %s", val)
 	}
 
-	return clientamount, accounts, amount
+	return balanceFrom, balanceTo, amount
 }
 
 func aesEncrypt(plaintext []byte) *encryptedContent {
-		block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -121,10 +118,14 @@ func aesEncrypt(plaintext []byte) *encryptedContent {
 	return &encryptedContent{ciphertext, nonce}
 }
 
-func getCiphertextOfData() (balance, x, elf *encryptedContent) {
+func getCiphertextOfData() (from, to, x, elf *encryptedContent) {
 	plaintextBalance := make([]byte, 16)
-	binary.BigEndian.PutUint32(plaintextBalance, 100)
-	balance = aesEncrypt(plaintextBalance)
+	binary.BigEndian.PutUint32(plaintextBalance, uint32(balanceFrom))
+	from = aesEncrypt(plaintextBalance)
+
+	plaintextBalance = make([]byte, 16)
+	binary.BigEndian.PutUint32(plaintextBalance, uint32(balanceTo))
+	to = aesEncrypt(plaintextBalance)
 
 	plaintextX := make([]byte, 16)
 	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
@@ -183,36 +184,37 @@ func Demo() error {
 	}
 	defer sdk.Close()
 
-	logger.Infof("Creating %d clients", clientamount)
-	clients := make([]*PaymentClient, clientamount)
-	for i := 0; i < clientamount; i++ {
-		client, err := New(sdk)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		clients[i] = client
+	client, err := New(sdk)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
-	balance, x, elf := getCiphertextOfData()
-	clients[0].CreateAccount(0, balance)
-	clients[0].CreateAccount(1, balance)
-	txid, err := clients[0].Transfer(0, 1, x, elf)
+	account0, account1, x, elf := getCiphertextOfData()
+	client.CreateAccount(0, account0)
+	client.CreateAccount(1, account1)
+	txid, err := client.Transfer(0, 1, x, elf)
+
+	client.GetState(0)
+	client.GetState(1)
+
 	if err != nil {
-		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
+		logger.Fatalf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
 		logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
 	}
-	clients[0].GetState(0)
-	clients[0].GetState(1)
 
-	txid, err = clients[0].Transfer(0, 1, x, elf)
+	client.GetState(0)
+	client.GetState(1)
+
+	txid, err = client.Transfer(0, 1, x, elf)
 	if err != nil {
-		logger.Errorf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
+		logger.Fatalf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
 		logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
 	}
-	clients[0].GetState(0)
-	clients[0].GetState(1)
+
+	client.GetState(0)
+	client.GetState(1)
 
 	return nil
 }
@@ -230,15 +232,6 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 		return nil, errors.WithMessage(err, "Failed to create new channel client: %s")
 	}
 	return &PaymentClient{client}, nil
-}
-
-func (c *PaymentClient) GetNetworkTotalAmount() int {
-	totalAmount := 0
-	for i := 0; i < clientamount; i++ {
-		balance := c.GetState(i)
-		totalAmount += balance
-	}
-	return totalAmount
 }
 
 func (c *PaymentClient) CreateAccount(index int, amount *encryptedContent) error {
