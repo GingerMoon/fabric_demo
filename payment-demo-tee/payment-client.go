@@ -6,8 +6,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
@@ -114,7 +114,7 @@ func aesEncrypt(plaintext []byte) *encryptedContent {
 	}
 
 	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
-	logger.Infof("plaintext is: %s, ciphertext is: %s", base64.StdEncoding.EncodeToString(plaintext), base64.StdEncoding.EncodeToString(ciphertext))
+	logger.Debugf("plaintext is: %s, ciphertext is: %s", hex.EncodeToString(plaintext), hex.EncodeToString(ciphertext))
 	return &encryptedContent{ciphertext, nonce}
 }
 
@@ -171,6 +171,7 @@ func decryptState(state *encryptedContent) int {
 	if err != nil {
 		panic(err.Error())
 	}
+	logger.Debugf("the returned plaintext is: %s", hex.EncodeToString(plaintext))
 	return int(binary.BigEndian.Uint32(plaintext[8:12]))
 }
 
@@ -192,11 +193,11 @@ func Demo() error {
 	account0, account1, x, elf := getCiphertextOfData()
 	client.CreateAccount(0, account0)
 	client.CreateAccount(1, account1)
-	txid, err := client.Transfer(0, 1, x, elf)
 
 	client.GetState(0)
 	client.GetState(1)
 
+	txid, err := client.Transfer(0, 1, x, elf)
 	if err != nil {
 		logger.Fatalf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
 	} else {
