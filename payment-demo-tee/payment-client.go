@@ -48,7 +48,7 @@ type encryptedContent struct {
 type payload struct {
 	From   string           `json:from`
 	To     string           `json:to`
-	State  encryptedContent `json:state`
+	Amount  encryptedContent `json:state`
 	Elf    encryptedContent `json:elf`
 	Nonces [][]byte         `json:nonces` // used for encrypting PutPrivateData
 }
@@ -236,7 +236,7 @@ func New(sdk *fabsdk.FabricSDK) (*PaymentClient, error) {
 }
 
 func (c *PaymentClient) CreateAccount(index int, amount *encryptedContent) error {
-	tmp := payload{From: "", To: strconv.Itoa(index), State: *amount}
+	tmp := payload{From: "", To: strconv.Itoa(index), Amount: *amount}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return errors.WithMessage(err, "CreateAccount failed (marshall payload).")
@@ -284,7 +284,7 @@ func (c *PaymentClient)  Transfer(from, to int, amount, elf *encryptedContent) (
 		nonces[i] = nonce
 	}
 
-	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), State: *amount, Elf: *elf, Nonces:nonces}
+	tmp := payload{From: strconv.Itoa(from), To: strconv.Itoa(to), Amount: *amount, Elf: *elf, Nonces:nonces}
 	payload, err := tmp.ToBytes()
 	if err != nil {
 		return "", errors.WithMessage(err, "Transfer failed (marshall payload).")

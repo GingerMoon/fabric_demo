@@ -28,7 +28,7 @@ type encryptedContent struct {
 type Payload struct {
 	From   string `json:from`
 	To     string `json:to`
-	State  encryptedContent `json:state`
+	Amount  encryptedContent `json:state`
 	Elf    encryptedContent `json:elf`
 	Nonces [][]byte `json:nonces` // used for encrypting PutPrivateData
 }
@@ -94,8 +94,8 @@ func (t *Paymentcc) create(stub shim.ChaincodeStubInterface, args []string) pb.R
 	}
 
 	// PutPrivateData
-	state, _ := json.Marshal(payload.State)
-	err := stub.PutPrivateData(COLLECTION, payload.To, state)
+	amount, _ := json.Marshal(payload.Amount)
+	err := stub.PutPrivateData(COLLECTION, payload.To, amount)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("put balance %s for %s failed, err %+v", args[1], args[0], err))
 	}
@@ -174,14 +174,14 @@ func (t *Paymentcc) transfer(stub shim.ChaincodeStubInterface, args []string) pb
 	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.Elf.Content, Nonce:payload.Elf.Nonce})
 	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateA.Content, Nonce:stateA.Nonce})
 	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:stateB.Content, Nonce:stateB.Nonce})
-	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.State.Content, Nonce:payload.State.Nonce})
+	feed4decrytions = append(feed4decrytions, &pbtee.Feed4Decryption{Ciphertext:payload.Amount.Content, Nonce:payload.Amount.Nonce})
 
 	results, err := stub.TeeExecute([]byte("paymentCCtee"), nil, feed4decrytions, payload.Nonces)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Tee Execution failed! error: %s", err.Error()))
 	}
 	if len(results.Feed4Decryptions) != 2 {
-		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. results.Feed4Decryptions is: %d", len(results.Feed4Decryptions)))
+		return shim.Error(fmt.Sprintf("Tee Execution returns incorrect response. the length of results.Feed4Decryptions is: %d", len(results.Feed4Decryptions)))
 	}
 
 	// update state db

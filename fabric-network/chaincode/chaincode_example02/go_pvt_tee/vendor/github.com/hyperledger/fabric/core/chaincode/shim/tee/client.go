@@ -78,6 +78,7 @@ func createTeeClient() pb.TeeClient {
 		serverAddr = "peer0.org1.example.com:20000"
 		logger.Infof("TEE_FPGA_SERVER_ADDR is not set. Now set it as default value: %s", serverAddr)
 	}
+	logger.Infof("grpc.Dial - server adddress is: %s", serverAddr)
 	conn, err := grpc.Dial(serverAddr, opts...)
 	if err != nil {
 		logger.Fatalf("fail to dial: %v", err)
