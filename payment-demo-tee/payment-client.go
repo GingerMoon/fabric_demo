@@ -7,7 +7,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
@@ -114,7 +113,7 @@ func aesEncrypt(plaintext []byte) *encryptedContent {
 	}
 
 	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
-	logger.Debugf("plaintext is: %s, ciphertext is: %s", hex.EncodeToString(plaintext), hex.EncodeToString(ciphertext))
+	//logger.Debugf("plaintext is: %s, ciphertext is: %s", hex.EncodeToString(plaintext), hex.EncodeToString(ciphertext))
 	return &encryptedContent{ciphertext, nonce}
 }
 
@@ -171,8 +170,8 @@ func decryptState(state *encryptedContent) int {
 	if err != nil {
 		panic(err.Error())
 	}
-	logger.Debugf("the returned plaintext is: %s", hex.EncodeToString(plaintext))
-	return int(binary.BigEndian.Uint32(plaintext[8:12]))
+	//logger.Debugf("the returned plaintext is: %s", hex.EncodeToString(plaintext))
+	return int(binary.BigEndian.Uint32(plaintext))
 }
 
 func Demo() error {
