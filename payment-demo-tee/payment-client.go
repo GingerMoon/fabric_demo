@@ -152,7 +152,7 @@ func getCiphertextOfData() (from, to, x, elf *encryptedContent) {
 
 	}
 
-	elf = aesEncrypt(plaintextElf)
+	elf = aesEncrypt(plaintextBin)
 	return
 }
 
