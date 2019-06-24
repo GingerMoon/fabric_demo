@@ -122,11 +122,11 @@ func getCiphertextOfData() (from, to, x, elf *encryptedContent) {
 	binary.BigEndian.PutUint32(plaintextBalance, uint32(balanceFrom))
 	from = aesEncrypt(plaintextBalance)
 
-	plaintextBalance = make([]byte, 16)
+	plaintextBalance = make([]byte, 4)
 	binary.BigEndian.PutUint32(plaintextBalance, uint32(balanceTo))
 	to = aesEncrypt(plaintextBalance)
 
-	plaintextX := make([]byte, 16)
+	plaintextX := make([]byte, 4)
 	binary.BigEndian.PutUint32(plaintextX, uint32(amount))
 	x = aesEncrypt(plaintextX)
 
@@ -139,19 +139,7 @@ func getCiphertextOfData() (from, to, x, elf *encryptedContent) {
 		plaintextElf = append(plaintextElf, 0)
 	}
 
-	// todo due to the hw bug, the elf need to be inverted
-	var plaintextBin []byte
-	for i := 0; i < len(plaintextElf); i = i + 8 {
-		//	fmt.Println("==============")
-		//	fmt.Println(i)
-		for j := 0; j < 8; j++ {
-			plaintextBin = append(plaintextBin, plaintextElf[i+7-j])
-			//  fmt.Println(plaintextElf[i+j])
-		}
-
-	}
-
-	elf = aesEncrypt(plaintextBin)
+	elf = aesEncrypt(plaintextElf)
 	return
 }
 
