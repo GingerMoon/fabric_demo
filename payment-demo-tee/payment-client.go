@@ -118,7 +118,7 @@ func aesEncrypt(plaintext []byte) *encryptedContent {
 }
 
 func getCiphertextOfData() (from, to, x, elf *encryptedContent) {
-	plaintextBalance := make([]byte, 16)
+	plaintextBalance := make([]byte, 4)
 	binary.BigEndian.PutUint32(plaintextBalance, uint32(balanceFrom))
 	from = aesEncrypt(plaintextBalance)
 
