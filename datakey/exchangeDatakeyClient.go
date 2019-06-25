@@ -60,7 +60,7 @@ func init() {
 	if nWorkers == 0 {
 		nWorkers = 10
 	}
-	logger.Infof("nWorkers is: %d", nWorkers)
+	//logger.Infof("nWorkers is: %d", nWorkers)
 	taskPool = make(chan *task, nWorkers)
 	workers = make([]*worker, nWorkers)
 	for i := 0; i < len(workers); i++ {
@@ -74,7 +74,7 @@ func createTeeClient() pb.TeeClient {
 	opts = append(opts, grpc.WithInsecure())
 	if serverAddr == "" {
 		serverAddr = "peer0.org1.example.com:20000"
-		logger.Infof("TEE_FPGA_SERVER_ADDR is not set. Now set it as default value: %s", serverAddr)
+		//logger.Infof("TEE_FPGA_SERVER_ADDR is not set. Now set it as default value: %s", serverAddr)
 	}
 	conn, err := grpc.Dial(serverAddr, opts...)
 	if err != nil {

@@ -194,15 +194,15 @@ func Demo() error {
 	client.GetState(0)
 	client.GetState(1)
 
-	txid, err = client.Transfer(0, 1, x, elf)
-	if err != nil {
-		logger.Fatalf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
-	} else {
-		logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
-	}
-
-	client.GetState(0)
-	client.GetState(1)
+	//txid, err = client.Transfer(0, 1, x, elf)
+	//if err != nil {
+	//	logger.Fatalf("transfer from 0 to 1 failed. txid: %v, error: %v", txid, err.Error())
+	//} else {
+	//	logger.Infof("transfer from 0 to 1 succeed. txid: %v", txid)
+	//}
+	//
+	//client.GetState(0)
+	//client.GetState(1)
 
 	return nil
 }
